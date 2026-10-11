@@ -1037,32 +1037,36 @@
           </div>
 
           <div class="form-group mt-3">
-            <label>Adjustment Type & Quantity</label>
-            <div class="adjust-controls-flex">
-              <div class="btn-group">
-                <button type="button" class="btn btn-secondary active" id="btn-adjust-add"
-                  onclick="AdminPanel.setAdjustType('ADD')">
-                  <i data-lucide="plus"></i> Add (+)
-                </button>
-                <button type="button" class="btn btn-secondary" id="btn-adjust-sub"
-                  onclick="AdminPanel.setAdjustType('SUB')">
-                  <i data-lucide="minus"></i> Subtract (-)
-                </button>
-                <button type="button" class="btn btn-secondary" id="btn-adjust-set"
-                  onclick="AdminPanel.setAdjustType('SET')">
-                  <i data-lucide="hash"></i> Exact Count (=)
-                </button>
-              </div>
-              <input type="number" id="adjust-qty" min="0" step="any" value="10" oninput="AdminPanel.recalcNewStock()"
-                required>
+            <label>Adjustment Type</label>
+            <div class="adjust-type-tabs">
+              <button type="button" class="adjust-tab active" id="btn-adjust-add"
+                onclick="AdminPanel.setAdjustType('ADD')">
+                <i data-lucide="plus"></i> Add (+)
+              </button>
+              <button type="button" class="adjust-tab" id="btn-adjust-sub"
+                onclick="AdminPanel.setAdjustType('SUB')">
+                <i data-lucide="minus"></i> Subtract (-)
+              </button>
+              <button type="button" class="adjust-tab" id="btn-adjust-set"
+                onclick="AdminPanel.setAdjustType('SET')">
+                <i data-lucide="hash"></i> Exact Count (=)
+              </button>
             </div>
-            <div class="quick-stock-chips mt-2" style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.quickAdjustQty(10)">+10</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.quickAdjustQty(25)">+25</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.quickAdjustQty(50)">+50</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.quickAdjustQty(100)">+100</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.quickSetExact(50)">Set 50</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.quickSetExact(100)">Set 100</button>
+
+            <label class="mt-2" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Quantity & Quick Presets</label>
+            <div class="adjust-qty-row">
+              <div class="adjust-qty-input-wrap">
+                <input type="number" id="adjust-qty" min="0" step="any" value="10" oninput="AdminPanel.recalcNewStock()"
+                  placeholder="Qty" required>
+              </div>
+              <div class="quick-stock-chips">
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(10)">+10</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(25)">+25</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(50)">+50</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(100)">+100</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickSetExact(50)">Set 50</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickSetExact(100)">Set 100</button>
+              </div>
             </div>
           </div>
 

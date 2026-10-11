@@ -1207,7 +1207,10 @@ const AdminPanel = {
     this.recalcNewStock();
 
     const modal = document.getElementById("modal-inventory-adjust");
-    if (modal) modal.classList.add("active");
+    if (modal) {
+      modal.classList.add("active");
+      if (window.lucide) lucide.createIcons();
+    }
   },
 
   quickAdjustQty(val) {
