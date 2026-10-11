@@ -17,6 +17,16 @@ const CashierPOS = {
   },
   currentPaymentMethod: "CASH",
   lastCompletedSale: null,
+  _barcodeCameraActive: false,
+  _barcodeCameraFacingMode: "environment",
+  _mediaStream: null,
+  _barcodeScanInterval: null,
+  _barcodeHtml5QrCode: null,
+  _lastScannedBarcode: null,
+  _lastScannedTime: 0,
+  _isScanLocked: false,
+  _barcodeBannerTimer: null,
+  _barcodeGunListenerAttached: false,
 
   init() {
     this.renderCategoryPills();
@@ -25,6 +35,7 @@ const CashierPOS = {
     this.setupSearchInput();
     this.updateDueDateDisplay();
     this.updateLaundryTrackerBadge();
+    this.setupGlobalBarcodeScannerGun();
 
     if (!this._syncListenerAttached) {
       this._syncListenerAttached = true;
@@ -32,6 +43,10 @@ const CashierPOS = {
         this.renderCategoryPills();
         this.renderProducts();
         this.updateLaundryTrackerBadge();
+        if (document.getElementById("modal-barcode-scan")?.classList.contains("active")) {
+          this.renderBarcodeQuickChips();
+          this.updateModalOrderSummary();
+        }
       });
     }
   },
@@ -412,6 +427,8 @@ const CashierPOS = {
     if (taxAmtEl) taxAmtEl.textContent = `₱${vatEstimate.toFixed(2)}`;
     if (grandTotalEl) grandTotalEl.textContent = `₱${grandTotal.toFixed(2)}`;
     if (checkoutBtn) checkoutBtn.disabled = false;
+
+    this.updateModalOrderSummary();
 
     if (window.lucide) lucide.createIcons();
   },
@@ -1131,42 +1148,440 @@ const CashierPOS = {
     }
   },
 
-  /* --- BARCODE SCANNER SIMULATOR --- */
-  openBarcodeScannerModal() {
+  /* --- GLOBAL HARDWARE BARCODE SCANNER GUN (PLUG & PLAY) --- */
+  setupGlobalBarcodeScannerGun() {
+    if (this._barcodeGunListenerAttached) return;
+    this._barcodeGunListenerAttached = true;
+
+    let buffer = "";
+    let lastCharTime = 0;
+
+    window.addEventListener("keydown", (e) => {
+      // Ignore functional/modifier keys
+      if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Tab" || e.key === "Escape") return;
+
+      const now = performance.now();
+      const diff = now - lastCharTime;
+      lastCharTime = now;
+
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+      const isSearchInput = activeEl && activeEl.id === "pos-search-input";
+      const isBarcodeModalInput = activeEl && activeEl.id === "barcode-manual-input";
+
+      if (e.key === "Enter") {
+        const candidate = buffer.trim();
+        buffer = "";
+
+        if (candidate.length >= 3) {
+          // Check if candidate matches a registered product or looks like a barcode
+          const data = StorageManager.get();
+          const cleanCand = candidate.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+          const isKnownBarcode = (data.products || []).some(p => {
+            const b = (p.barcode || "").trim().toLowerCase();
+            const s = (p.sku || "").trim().toLowerCase();
+            return b === candidate.toLowerCase() || s === candidate.toLowerCase() ||
+                   (cleanCand && (b.replace(/[^a-zA-Z0-9]/g, "") === cleanCand || s.replace(/[^a-zA-Z0-9]/g, "") === cleanCand));
+          });
+
+          // If scanned while on general POS screen or search input
+          if (isKnownBarcode || !isInput || isSearchInput || isBarcodeModalInput) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isSearchInput && activeEl) {
+              activeEl.value = "";
+              this.clearSearch();
+            }
+            if (isBarcodeModalInput && activeEl) {
+              activeEl.value = "";
+            }
+            this.handleScannedBarcode(candidate, { source: "gun" });
+            return;
+          }
+        }
+        return;
+      }
+
+      // Barcode guns send characters at rapid intervals (<70ms)
+      if (e.key.length === 1) {
+        if (diff > 85 && !isInput) {
+          buffer = e.key;
+        } else if (diff <= 85 || buffer.length === 0) {
+          buffer += e.key;
+        }
+      }
+    }, true);
+  },
+
+  /* --- POS CAMERA & HARDWARE BARCODE SCANNER --- */
+  async openBarcodeScannerModal() {
     const modal = document.getElementById("modal-barcode-scan");
-    const chipsList = document.getElementById("barcode-quick-chips");
     const input = document.getElementById("barcode-manual-input");
 
-    if (chipsList) {
-      const data = StorageManager.get();
-      let html = "";
-      data.products.filter(p => p.barcode).forEach(p => {
-        html += `
-          <div class="barcode-item-chip" onclick="CashierPOS.simulateScanCode('${p.barcode}')">
-            <span><b>${p.name}</b> (₱${p.price.toFixed(2)} / ${p.unit || 'pc'})</span>
-            <span class="user-meta">${p.barcode}</span>
-          </div>
-        `;
-      });
-      chipsList.innerHTML = html;
-    }
+    this.renderBarcodeQuickChips();
+    this.updateModalOrderSummary();
 
     if (modal) modal.classList.add("active");
     if (input) {
       input.value = "";
       setTimeout(() => input.focus(), 150);
     }
+
+    // Automatically activate camera scanner
+    await this.startBarcodeCamera();
+    if (window.lucide) lucide.createIcons();
   },
 
-  closeBarcodeScannerModal() {
+  async closeBarcodeScannerModal() {
     const modal = document.getElementById("modal-barcode-scan");
     if (modal) modal.classList.remove("active");
+    await this.stopBarcodeCamera();
+  },
+
+  renderBarcodeQuickChips() {
+    const chipsList = document.getElementById("barcode-quick-chips");
+    if (!chipsList) return;
+
+    const data = StorageManager.get();
+    const barcodeProds = (data.products || []).filter(p => p.barcode);
+
+    if (barcodeProds.length === 0) {
+      chipsList.innerHTML = `<p class="text-xs text-muted" style="grid-column:1/-1; padding:0.5rem;">No products with barcodes registered yet.</p>`;
+      return;
+    }
+
+    let html = "";
+    barcodeProds.forEach(p => {
+      const img = p.imageUrl || "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=100&q=80";
+      html += `
+        <div class="barcode-chip-card" onclick="CashierPOS.simulateScanCode('${p.barcode}')" title="Click to simulate scan & auto-add">
+          <img src="${img}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=100&q=80'">
+          <div class="barcode-chip-info">
+            <div class="barcode-chip-name">${p.name}</div>
+            <div class="barcode-chip-meta">
+              <span>₱${p.price.toFixed(2)}</span> • <span>${p.barcode}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    chipsList.innerHTML = html;
+  },
+
+  updateModalOrderSummary() {
+    const cartCountEl = document.getElementById("pos-barcode-cart-count");
+    const orderTotalEl = document.getElementById("pos-barcode-order-total");
+    if (!cartCountEl && !orderTotalEl) return;
+
+    const totalQty = this.cart.reduce((sum, it) => sum + it.quantity, 0);
+    let subtotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    let discountAmount = 0;
+    if (this.discount.type === "percentage") {
+      discountAmount = (subtotal * this.discount.value) / 100;
+    } else if (this.discount.type === "fixed") {
+      discountAmount = Math.min(this.discount.value, subtotal);
+    }
+    const grandTotal = Math.max(0, subtotal - discountAmount);
+
+    if (cartCountEl) {
+      cartCountEl.textContent = `${totalQty} item${totalQty === 1 ? '' : 's'}`;
+    }
+    if (orderTotalEl) {
+      orderTotalEl.textContent = `₱${grandTotal.toFixed(2)}`;
+    }
+  },
+
+  updateCameraStatusUI(active, text) {
+    const pill = document.getElementById("pos-camera-status-pill");
+    const textEl = document.getElementById("pos-camera-status-text");
+    const toggleBtn = document.getElementById("btn-pos-toggle-camera");
+
+    if (textEl && text) textEl.textContent = text;
+    if (pill) {
+      pill.classList.toggle("active", !!active);
+    }
+    if (toggleBtn) {
+      toggleBtn.innerHTML = active
+        ? `<i data-lucide="video-off"></i> Turn Off`
+        : `<i data-lucide="camera"></i> Start Camera`;
+      if (window.lucide) lucide.createIcons();
+    }
+  },
+
+  async toggleBarcodeCamera() {
+    if (this._barcodeCameraActive) {
+      await this.stopBarcodeCamera();
+    } else {
+      await this.startBarcodeCamera();
+    }
+  },
+
+  async flipBarcodeCamera() {
+    this._barcodeCameraFacingMode = (this._barcodeCameraFacingMode === "environment" ? "user" : "environment");
+    await this.stopBarcodeCamera();
+    await this.startBarcodeCamera();
+  },
+
+  async startBarcodeCamera() {
+    this._isScanLocked = false;
+    this.updateCameraStatusUI(true, "Starting camera...");
+
+    const nativeVideo = document.getElementById("pos-barcode-native-video");
+    const streamContainer = document.getElementById("pos-barcode-camera-stream");
+    const laserLine = document.getElementById("pos-scanner-laser-line");
+    const reticle = document.getElementById("pos-scanner-reticle");
+
+    if (laserLine) laserLine.style.display = "block";
+    if (reticle) reticle.style.display = "block";
+
+    // 1. Try Native BarcodeDetector API (Built-in to Chrome / Edge / Android, GPU accelerated)
+    if ("BarcodeDetector" in window) {
+      try {
+        const supportedFormats = await BarcodeDetector.getSupportedFormats().catch(() => ["ean_13", "upc_a", "code_128", "qr_code"]);
+        const detector = new BarcodeDetector({ formats: supportedFormats });
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: this._barcodeCameraFacingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+
+        this._mediaStream = stream;
+        if (nativeVideo) {
+          nativeVideo.srcObject = stream;
+          nativeVideo.style.display = "block";
+          if (streamContainer) {
+            streamContainer.style.display = "none";
+            streamContainer.innerHTML = "";
+          }
+          await nativeVideo.play();
+
+          if (this._barcodeScanInterval) clearInterval(this._barcodeScanInterval);
+          this._barcodeScanInterval = setInterval(async () => {
+            if (this._isScanLocked || !this._barcodeCameraActive || nativeVideo.readyState < 2) return;
+            try {
+              const barcodes = await detector.detect(nativeVideo);
+              if (barcodes && barcodes.length > 0) {
+                const rawValue = barcodes[0].rawValue;
+                if (rawValue) {
+                  this.handleScannedBarcode(rawValue, { source: "camera" });
+                }
+              }
+            } catch (detErr) {}
+          }, 200);
+
+          this._barcodeCameraActive = true;
+          this.updateCameraStatusUI(true, "Scanning Live");
+          return;
+        }
+      } catch (nativeErr) {
+        console.warn("Native BarcodeDetector fallback:", nativeErr);
+      }
+    }
+
+    // 2. Fallback to Html5Qrcode Library
+    if (nativeVideo) {
+      nativeVideo.style.display = "none";
+      nativeVideo.pause();
+      nativeVideo.srcObject = null;
+    }
+    if (!streamContainer) return;
+    streamContainer.style.display = "flex";
+    streamContainer.innerHTML = "";
+
+    if (typeof Html5Qrcode === "undefined") {
+      this._barcodeCameraActive = false;
+      this.updateCameraStatusUI(false, "Camera Library Unavailable");
+      return;
+    }
+
+    try {
+      if (!this._barcodeHtml5QrCode) {
+        this._barcodeHtml5QrCode = new Html5Qrcode("pos-barcode-camera-stream");
+      }
+
+      const config = {
+        fps: 10,
+        qrbox: (w, h) => ({
+          width: Math.floor(Math.min(w * 0.85, 300)),
+          height: Math.floor(Math.min(h * 0.65, 150))
+        }),
+        aspectRatio: 1.777778
+      };
+
+      await this._barcodeHtml5QrCode.start(
+        { facingMode: this._barcodeCameraFacingMode },
+        config,
+        (decodedText) => {
+          if (!this._isScanLocked) {
+            this.handleScannedBarcode(decodedText, { source: "camera" });
+          }
+        },
+        () => {}
+      );
+
+      this._barcodeCameraActive = true;
+      this.updateCameraStatusUI(true, "Scanning Live");
+    } catch (err) {
+      console.warn("Camera fallback start error:", err);
+      this._barcodeCameraActive = false;
+      this.updateCameraStatusUI(false, "Camera Unavailable");
+    }
+  },
+
+  async stopBarcodeCamera() {
+    if (this._barcodeScanInterval) {
+      clearInterval(this._barcodeScanInterval);
+      this._barcodeScanInterval = null;
+    }
+
+    if (this._mediaStream) {
+      this._mediaStream.getTracks().forEach(t => t.stop());
+      this._mediaStream = null;
+    }
+
+    const nativeVideo = document.getElementById("pos-barcode-native-video");
+    if (nativeVideo) {
+      nativeVideo.pause();
+      nativeVideo.srcObject = null;
+      nativeVideo.style.display = "none";
+    }
+
+    if (this._barcodeHtml5QrCode && this._barcodeCameraActive) {
+      try {
+        await this._barcodeHtml5QrCode.stop();
+      } catch (e) {}
+    }
+
+    this._barcodeCameraActive = false;
+    this.updateCameraStatusUI(false, "Camera Off");
+  },
+
+  async handleScannedBarcode(rawCode, options = {}) {
+    const code = String(rawCode || "").trim();
+    if (!code) return;
+
+    // Cooldown check for rapid repeat trigger of same code (1.2s debounce)
+    const now = Date.now();
+    if (this._lastScannedBarcode === code && (now - this._lastScannedTime) < 1200) {
+      return;
+    }
+    this._lastScannedBarcode = code;
+    this._lastScannedTime = now;
+
+    const data = StorageManager.get();
+    const cleanCode = code.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+    // 1. Search locally in products by barcode, sku, or id
+    let product = (data.products || []).find(p => {
+      const b = (p.barcode || "").trim().toLowerCase();
+      const s = (p.sku || "").trim().toLowerCase();
+      const id = (p.id || "").trim().toLowerCase();
+      const cleanB = b.replace(/[^a-zA-Z0-9]/g, "");
+      const cleanS = s.replace(/[^a-zA-Z0-9]/g, "");
+      return b === code.toLowerCase() || s === code.toLowerCase() || id === code.toLowerCase() ||
+             (cleanCode && (cleanB === cleanCode || cleanS === cleanCode));
+    });
+
+    // 2. If not found in local products, try server lookup to auto-register supply detergent
+    if (!product) {
+      try {
+        this.updateCameraStatusUI(true, `Looking up barcode ${code}...`);
+        const apiUrl = (typeof getApiUrl === "function") ? getApiUrl(`/api/barcode/lookup?code=${encodeURIComponent(code)}`) : `/api/barcode/lookup?code=${encodeURIComponent(code)}`;
+        const res = await fetch(apiUrl);
+        if (res.ok) {
+          const result = await res.json();
+          if (result && result.found && result.product) {
+            const catId = (data.categories && data.categories.length > 0) ? (data.categories.find(c => c.name.toLowerCase().includes("detergent") || c.name.toLowerCase().includes("material"))?.id || data.categories[0].id) : "cat-default";
+            const newProd = {
+              id: "prod-sup-" + Date.now(),
+              name: result.product.name,
+              brand: result.product.brand || "",
+              sku: result.product.sku || ("BAR-" + code.slice(-6)),
+              categoryId: catId,
+              unit: result.product.unit || "sachet",
+              barcode: code,
+              price: result.product.price || 15,
+              costPrice: result.product.costPrice || 15,
+              isService: false,
+              stockQuantity: 20,
+              lowStockThreshold: 10,
+              description: result.product.description || `${result.product.name} (Barcode: ${code})`,
+              imageUrl: result.product.imageUrl || "",
+              status: "active"
+            };
+            data.products.push(newProd);
+            StorageManager.save(data);
+            this.renderProducts();
+            this.renderBarcodeQuickChips();
+            product = newProd;
+          }
+        }
+      } catch (e) {
+        console.warn("Online barcode lookup error:", e);
+      }
+      this.updateCameraStatusUI(true, "Scanning Live");
+    }
+
+    if (product) {
+      const isSupply = !product.isService;
+      if (isSupply && product.stockQuantity <= 0) {
+        Sound.playError();
+        App.showToast(`"${product.name}" is currently out of stock.`, "danger");
+        this.showBarcodeDetectionBanner(product, false, "Out of Stock");
+        return;
+      }
+
+      // Automatically add to current laundry order!
+      this.addToCart(product.id);
+      if (navigator.vibrate) navigator.vibrate(80);
+
+      this.showBarcodeDetectionBanner(product, true);
+      this.updateModalOrderSummary();
+      App.showToast(`✓ Added to Order: ${product.name}`, "success");
+    } else {
+      Sound.playError();
+      App.showToast(`No product found with barcode "${code}"`, "danger");
+      this.showBarcodeDetectionBanner(null, false, `Barcode "${code}" not found`);
+    }
+  },
+
+  showBarcodeDetectionBanner(product, isSuccess, customMsg) {
+    const banner = document.getElementById("pos-barcode-last-scanned");
+    const titleEl = document.getElementById("scanned-banner-title");
+    const subEl = document.getElementById("scanned-banner-sub");
+    const iconTag = document.getElementById("scanned-banner-icon-tag");
+
+    if (!banner || !titleEl || !subEl) return;
+
+    if (isSuccess && product) {
+      banner.classList.remove("is-error");
+      titleEl.textContent = product.name;
+      subEl.textContent = `✓ Automatically added to order (₱${product.price.toFixed(2)} / ${product.unit || 'pc'})`;
+      if (iconTag) iconTag.setAttribute("data-lucide", "check");
+    } else {
+      banner.classList.add("is-error");
+      titleEl.textContent = customMsg || "Item Not Found";
+      subEl.textContent = "Please check barcode number or register item in Admin.";
+      if (iconTag) iconTag.setAttribute("data-lucide", "alert-triangle");
+    }
+
+    banner.style.display = "flex";
+    if (window.lucide) lucide.createIcons();
+
+    if (this._barcodeBannerTimer) clearTimeout(this._barcodeBannerTimer);
+    this._barcodeBannerTimer = setTimeout(() => {
+      banner.style.display = "none";
+    }, 2800);
   },
 
   simulateScanCode(barcode) {
     const input = document.getElementById("barcode-manual-input");
     if (input) input.value = barcode;
-    this.submitBarcodeScan();
+    this.handleScannedBarcode(barcode, { source: "chip" });
   },
 
   submitBarcodeScan() {
@@ -1176,17 +1591,9 @@ const CashierPOS = {
     const barcode = input.value.trim();
     if (!barcode) return;
 
-    const data = StorageManager.get();
-    const product = data.products.find(p => p.barcode === barcode || p.sku === barcode);
-
-    if (product) {
-      this.addToCart(product.id);
-      this.closeBarcodeScannerModal();
-      App.showToast(`Scanned: ${product.name}`, "success");
-    } else {
-      Sound.playError();
-      App.showToast(`No product found with barcode "${barcode}"`, "danger");
-    }
+    this.handleScannedBarcode(barcode, { source: "manual" });
+    input.value = "";
+    input.focus();
   },
 
   /* --- RECENT SALES (CASHIER DRAWER) --- */

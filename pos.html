@@ -15,6 +15,8 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Canvas Confetti for Sale Celebrations -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- HTML5 QR Code / Barcode Scanner CDN -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -105,9 +107,9 @@
           </div>
 
           <div class="quick-barcode-action">
-            <button type="button" class="btn btn-secondary" onclick="CashierPOS.openBarcodeScannerModal()" title="Simulate Barcode Scanner">
+            <button type="button" class="btn btn-secondary" onclick="CashierPOS.openBarcodeScannerModal()" title="Open Barcode Scanner (Webcam or Gun)">
               <i data-lucide="scan-barcode"></i>
-              <span>Barcode Scan</span>
+              <span>Barcode Scanner</span>
             </button>
           </div>
         </div>
@@ -499,13 +501,18 @@
   </div>
 
 
-  <!-- 5. BARCODE SIMULATOR MODAL -->
+  <!-- 5. BARCODE SCANNER MODAL -->
   <div id="modal-barcode-scan" class="modal-backdrop">
     <div class="modal-dialog modal-barcode-dialog">
       <div class="modal-header">
-        <div class="modal-title">
-          <i data-lucide="scan-barcode"></i>
-          <h3>Barcode Scanner Simulator</h3>
+        <div class="modal-title" style="display:flex; align-items:center; gap:0.75rem;">
+          <div class="modal-icon-badge">
+            <i data-lucide="scan-barcode"></i>
+          </div>
+          <div>
+            <h3 style="margin:0;">POS Barcode Scanner</h3>
+            <p class="modal-subtitle">Point camera or scan with barcode gun to automatically add laundry items.</p>
+          </div>
         </div>
         <button type="button" class="modal-close-btn" onclick="CashierPOS.closeBarcodeScannerModal()">
           <i data-lucide="x"></i>
@@ -513,23 +520,91 @@
       </div>
 
       <div class="modal-body">
-        <p class="text-sm text-muted">Simulate a handheld optical barcode scanner. Scan or click a laundry service or supply barcode below to add directly to the order.</p>
+        <!-- Live Auto-Add Status Banner -->
+        <div class="pos-barcode-status-bar">
+          <div class="auto-add-pill">
+            <span class="auto-add-dot"></span>
+            <span>Auto-Add to Laundry Items Active</span>
+          </div>
+          <div class="text-xs text-muted" id="pos-barcode-summary-badge">
+            Current Order: <strong id="pos-barcode-cart-count" style="color:var(--text-main);">0 items</strong>
+          </div>
+        </div>
+
+        <!-- Live Camera Viewport -->
+        <div class="pos-camera-card">
+          <div class="pos-camera-card-header">
+            <div class="camera-status-pill" id="pos-camera-status-pill">
+              <span class="status-dot"></span>
+              <span id="pos-camera-status-text">Starting Camera...</span>
+            </div>
+            <div style="display:flex; gap:0.4rem; align-items:center;">
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-pos-flip-camera" onclick="CashierPOS.flipBarcodeCamera()" title="Switch Front/Rear Camera">
+                <i data-lucide="refresh-cw"></i> Flip
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-pos-toggle-camera" onclick="CashierPOS.toggleBarcodeCamera()">
+                <i data-lucide="camera"></i> Camera
+              </button>
+            </div>
+          </div>
+
+          <div class="pos-camera-viewport-wrapper" id="pos-camera-viewport-wrapper">
+            <video id="pos-barcode-native-video" playsinline muted autoplay style="display:none;"></video>
+            <div id="pos-barcode-camera-stream" class="pos-barcode-camera-stream" style="display:none;"></div>
+            <div class="scanner-laser-line" id="pos-scanner-laser-line"></div>
+            <div class="scanner-reticle" id="pos-scanner-reticle">
+              <span class="reticle-corner tl"></span>
+              <span class="reticle-corner tr"></span>
+              <span class="reticle-corner bl"></span>
+              <span class="reticle-corner br"></span>
+            </div>
+
+            <!-- Instant Last Scanned Item Banner Overlay -->
+            <div id="pos-barcode-last-scanned" class="barcode-last-scanned-banner" style="display:none;">
+              <div class="scanned-banner-icon">
+                <i data-lucide="check" id="scanned-banner-icon-tag"></i>
+              </div>
+              <div class="scanned-banner-details">
+                <div class="scanned-banner-title" id="scanned-banner-title">Item Name</div>
+                <div class="scanned-banner-sub" id="scanned-banner-sub">✓ Automatically added to laundry order</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual Input / Scanner Gun Input -->
         <div class="form-group mt-3">
-          <label for="barcode-manual-input">Scan / Enter Barcode</label>
+          <label for="barcode-manual-input" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:flex; justify-content:space-between;">
+            <span>Scan with Gun or Type Barcode</span>
+            <span class="text-xs">Press ↵ Enter to add</span>
+          </label>
           <div class="input-with-button">
-            <input type="text" id="barcode-manual-input" placeholder="e.g. 480009900101" onkeydown="if(event.key==='Enter') CashierPOS.submitBarcodeScan()">
+            <input type="text" id="barcode-manual-input" placeholder="e.g. 8934868113034 or 4800888223395" onkeydown="if(event.key==='Enter') CashierPOS.submitBarcodeScan()">
             <button type="button" class="btn btn-primary" onclick="CashierPOS.submitBarcodeScan()">
-              <i data-lucide="corner-down-left"></i> Scan
+              <i data-lucide="corner-down-left"></i> Add Item
             </button>
           </div>
         </div>
 
+        <!-- Quick Test Items Chips -->
         <div class="barcode-quick-items mt-3">
-          <span class="label">Click to Simulate Scan:</span>
-          <div class="barcode-chips-list" id="barcode-quick-chips">
-            <!-- Populated dynamically -->
+          <span class="label" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.4rem;">
+            Click to Scan / Add Available Items:
+          </span>
+          <div class="barcode-quick-grid" id="barcode-quick-chips">
+            <!-- Dynamically populated from products with barcodes -->
           </div>
         </div>
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:0.9rem;">
+          <span class="text-muted">Order Subtotal:</span>
+          <strong id="pos-barcode-order-total" style="color:var(--success); font-size:1.1rem; margin-left:4px;">₱0.00</strong>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="CashierPOS.closeBarcodeScannerModal()">
+          <i data-lucide="check"></i> Done (Return to POS)
+        </button>
       </div>
     </div>
   </div>
@@ -1060,12 +1135,20 @@
             const input = document.getElementById("pos-search-input");
             if (input) { input.focus(); input.select(); }
           }
+          if (e.key === "F3") {
+            e.preventDefault();
+            CashierPOS.openBarcodeScannerModal();
+          }
           if (e.key === "F4") {
             e.preventDefault();
             const btn = document.getElementById("btn-checkout");
             if (btn && !btn.disabled) CashierPOS.openCheckoutModal();
           }
           if (e.key === "Escape") {
+            const barcodeModal = document.getElementById("modal-barcode-scan");
+            if (barcodeModal && barcodeModal.classList.contains("active")) {
+              CashierPOS.closeBarcodeScannerModal();
+            }
             document.querySelectorAll(".modal-backdrop.active").forEach(m => m.classList.remove("active"));
           }
         });
