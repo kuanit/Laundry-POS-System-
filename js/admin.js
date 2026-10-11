@@ -632,18 +632,7 @@ const AdminPanel = {
           <div class="admin-product-card ${p.status === 'inactive' ? 'product-card-inactive' : ''}" 
                id="prod-card-${p.id}"
                data-id="${p.id}"
-               onmousedown="AdminPanel.handleCardPressStart(event, '${p.id}')"
-               onmouseup="AdminPanel.handleCardPressEnd(event)"
-               onmouseleave="AdminPanel.handleCardPressEnd(event)"
-               ontouchstart="AdminPanel.handleCardTouchStart(event, '${p.id}')"
-               ontouchend="AdminPanel.handleCardTouchEnd(event)"
-               ontouchcancel="AdminPanel.handleCardTouchEnd(event)"
-               ontouchmove="AdminPanel.handleCardTouchMove(event)"
-               ondragstart="AdminPanel.handleDragStart(event, '${p.id}')"
-               ondragover="AdminPanel.handleDragOver(event, '${p.id}')"
-               ondragleave="AdminPanel.handleDragLeave(event, '${p.id}')"
-               ondrop="AdminPanel.handleDrop(event, '${p.id}')"
-               ondragend="AdminPanel.handleDragEnd(event)"
+               onpointerdown="AdminPanel.handleCardPointerDown(event, '${p.id}')"
                onclick="AdminPanel.handleCardClick(event, '${p.id}')">
             <div class="admin-product-card-img">
               <img src="${displayImg}" alt="${p.name}" draggable="false" loading="lazy" onerror="this.src='${placeholder}'">
@@ -720,72 +709,148 @@ const AdminPanel = {
   },
 
   /* =========================================================
-     DRAG & DROP REORDER (PRESS & HOLD 1.5s TO ACTIVATE)
+     DRAG & DROP REORDER (PRESS & HOLD 0.5s TO DIRECTLY DRAG)
+     Follows cursor on desktop and finger on tablet/touch
      ========================================================= */
   _pressTimer: null,
-  _pressStartPos: null,
-  _activeDragCardId: null,
+  _startPos: null,
+  _pointerId: null,
+  _dragProdId: null,
+  _dropTargetId: null,
+  _isDragging: false,
+  _ghostEl: null,
   _suppressCardClick: false,
-  _draggedItemId: null,
-  _touchDraggingTargetId: null,
 
-  handleCardPressStart(e, prodId) {
+  handleCardPointerDown(e, prodId) {
     if (e.target.closest("button") || e.target.closest("a") || e.target.closest("input")) return;
-    this.startLongPress(e.clientX, e.clientY, prodId);
-  },
+    if (e.button !== undefined && e.button !== 0) return;
 
-  handleCardPressEnd(e) {
     this.cancelLongPress();
-  },
-
-  handleCardTouchStart(e, prodId) {
-    if (e.target.closest("button") || e.target.closest("a") || e.target.closest("input")) return;
-    if (e.touches && e.touches.length > 0) {
-      const t = e.touches[0];
-      this.startLongPress(t.clientX, t.clientY, prodId);
-    }
-  },
-
-  handleCardTouchEnd(e) {
-    this.cancelLongPress();
-    if (this._touchDraggingTargetId && this._activeDragCardId) {
-      this.reorderProducts(this._activeDragCardId, this._touchDraggingTargetId);
-      this.cleanupDragStates();
-    }
-  },
-
-  handleCardTouchMove(e) {
-    if (this._pressTimer && this._pressStartPos && e.touches && e.touches.length > 0) {
-      const t = e.touches[0];
-      const dist = Math.hypot(t.clientX - this._pressStartPos.x, t.clientY - this._pressStartPos.y);
-      if (dist > 10) this.cancelLongPress();
-    }
-    if (this._activeDragCardId && e.touches && e.touches.length > 0) {
-      e.preventDefault();
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY)?.closest(".admin-product-card");
-      document.querySelectorAll(".admin-product-card.drag-over").forEach(c => c.classList.remove("drag-over"));
-      if (el && el.dataset.id && el.dataset.id !== this._activeDragCardId) {
-        el.classList.add("drag-over");
-        this._touchDraggingTargetId = el.dataset.id;
-      } else {
-        this._touchDraggingTargetId = null;
-      }
-    }
-  },
-
-  startLongPress(clientX, clientY, prodId) {
-    this.cancelLongPress();
-    this._pressStartPos = { x: clientX, y: clientY };
+    this._pointerId = e.pointerId;
+    this._dragProdId = prodId;
+    this._startPos = { x: e.clientX, y: e.clientY };
+    this._isDragging = false;
+    this._dropTargetId = null;
 
     const card = document.getElementById(`prod-card-${prodId}`);
-    if (card) card.classList.add("card-press-holding");
+    if (card) {
+      card.classList.add("card-press-holding");
+    }
 
+    const onPointerMove = (moveEvt) => {
+      if (moveEvt.pointerId !== this._pointerId) return;
+      if (!this._isDragging) {
+        const dist = Math.hypot(moveEvt.clientX - this._startPos.x, moveEvt.clientY - this._startPos.y);
+        if (dist > 8) {
+          this.cancelLongPress();
+          cleanup();
+        }
+      } else {
+        moveEvt.preventDefault();
+        this.updateDragGhost(moveEvt.clientX, moveEvt.clientY);
+        this.updateDropTarget(moveEvt.clientX, moveEvt.clientY);
+      }
+    };
+
+    const onPointerUp = (upEvt) => {
+      if (upEvt.pointerId !== this._pointerId) return;
+      cleanup();
+
+      if (this._isDragging) {
+        this.finishDrag();
+      } else {
+        this.cancelLongPress();
+      }
+    };
+
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: false });
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+
+    // 0.5s (500ms) press-and-hold requirement
     this._pressTimer = setTimeout(() => {
       this._pressTimer = null;
       if (card) card.classList.remove("card-press-holding");
-      this.enableDragForCard(prodId);
-    }, 1500); // 1.5 seconds press and hold requirement
+      this.startDragging(e.clientX, e.clientY, prodId, card);
+    }, 500);
+  },
+
+  startDragging(clientX, clientY, prodId, card) {
+    this._isDragging = true;
+    this._suppressCardClick = true;
+
+    if (navigator.vibrate) navigator.vibrate(50);
+
+    card.classList.add("is-dragging");
+
+    // Create the floating ghost card that directly follows the cursor / finger!
+    const ghost = document.createElement("div");
+    ghost.id = "drag-ghost-avatar";
+    ghost.className = "drag-ghost-card";
+
+    const cardRect = card.getBoundingClientRect();
+    ghost.style.width = `${cardRect.width}px`;
+    ghost.style.height = `${cardRect.height}px`;
+    ghost.style.left = `${clientX}px`;
+    ghost.style.top = `${clientY}px`;
+    ghost.innerHTML = card.innerHTML;
+
+    document.body.appendChild(ghost);
+    this._ghostEl = ghost;
+  },
+
+  updateDragGhost(clientX, clientY) {
+    if (this._ghostEl) {
+      this._ghostEl.style.left = `${clientX}px`;
+      this._ghostEl.style.top = `${clientY}px`;
+    }
+  },
+
+  updateDropTarget(clientX, clientY) {
+    const targetEl = document.elementFromPoint(clientX, clientY);
+    const targetCard = targetEl?.closest(".admin-product-card");
+
+    document.querySelectorAll(".admin-product-card.drag-over").forEach(c => c.classList.remove("drag-over"));
+
+    if (targetCard && targetCard.dataset.id && targetCard.dataset.id !== this._dragProdId) {
+      targetCard.classList.add("drag-over");
+      this._dropTargetId = targetCard.dataset.id;
+    } else {
+      this._dropTargetId = null;
+    }
+  },
+
+  finishDrag() {
+    if (this._ghostEl) {
+      this._ghostEl.remove();
+      this._ghostEl = null;
+    }
+
+    const sourceId = this._dragProdId;
+    const targetId = this._dropTargetId;
+
+    document.querySelectorAll(".admin-product-card").forEach(c => {
+      c.classList.remove("is-dragging", "drag-over", "card-press-holding");
+    });
+
+    if (sourceId && targetId && sourceId !== targetId) {
+      this.reorderProducts(sourceId, targetId);
+    }
+
+    this._isDragging = false;
+    this._dragProdId = null;
+    this._dropTargetId = null;
+    this._pointerId = null;
+
+    setTimeout(() => {
+      this._suppressCardClick = false;
+    }, 300);
   },
 
   cancelLongPress() {
@@ -796,99 +861,12 @@ const AdminPanel = {
     document.querySelectorAll(".admin-product-card.card-press-holding").forEach(c => c.classList.remove("card-press-holding"));
   },
 
-  enableDragForCard(prodId) {
-    this._activeDragCardId = prodId;
-    this._suppressCardClick = true;
-
-    // Reset previous drag states on any other cards
-    document.querySelectorAll(".admin-product-card").forEach(c => {
-      c.removeAttribute("draggable");
-      c.classList.remove("item-drag-enabled", "is-dragging", "drag-over");
-      const oldBadge = c.querySelector(".drag-ready-badge");
-      if (oldBadge) oldBadge.remove();
-    });
-
-    const card = document.getElementById(`prod-card-${prodId}`);
-    if (card) {
-      card.setAttribute("draggable", "true");
-      card.classList.add("item-drag-enabled");
-
-      const badge = document.createElement("span");
-      badge.className = "drag-ready-badge";
-      badge.innerHTML = `<i data-lucide="move"></i> Ready to Move`;
-      card.appendChild(badge);
-      if (window.lucide) lucide.createIcons();
-
-      if (navigator.vibrate) navigator.vibrate(50);
-      App.showToast("Hold detected! Drag this item to rearrange.", "info");
-    }
-  },
-
   handleCardClick(e, prodId) {
     if (this._suppressCardClick) {
       this._suppressCardClick = false;
       return;
     }
-    if (this._activeDragCardId === prodId) {
-      this.cleanupDragStates();
-      return;
-    }
     this.editProduct(prodId);
-  },
-
-  handleDragStart(e, prodId) {
-    if (this._activeDragCardId !== prodId) {
-      e.preventDefault();
-      return;
-    }
-    this._draggedItemId = prodId;
-    e.dataTransfer.setData("text/plain", prodId);
-    e.dataTransfer.effectAllowed = "move";
-    const card = document.getElementById(`prod-card-${prodId}`);
-    if (card) card.classList.add("is-dragging");
-  },
-
-  handleDragOver(e, targetId) {
-    if (!this._activeDragCardId) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    const card = document.getElementById(`prod-card-${targetId}`);
-    if (card && targetId !== this._activeDragCardId) {
-      card.classList.add("drag-over");
-    }
-  },
-
-  handleDragLeave(e, targetId) {
-    const card = document.getElementById(`prod-card-${targetId}`);
-    if (card) card.classList.remove("drag-over");
-  },
-
-  handleDrop(e, targetId) {
-    e.preventDefault();
-    const sourceId = e.dataTransfer.getData("text/plain") || this._draggedItemId;
-    this.cleanupDragStates();
-
-    if (sourceId && targetId && sourceId !== targetId) {
-      this.reorderProducts(sourceId, targetId);
-    }
-  },
-
-  handleDragEnd(e) {
-    this.cleanupDragStates();
-  },
-
-  cleanupDragStates() {
-    this._activeDragCardId = null;
-    this._draggedItemId = null;
-    this._touchDraggingTargetId = null;
-    this.cancelLongPress();
-    document.querySelectorAll(".admin-product-card").forEach(c => {
-      c.removeAttribute("draggable");
-      c.classList.remove("item-drag-enabled", "is-dragging", "drag-over", "card-press-holding");
-      const badge = c.querySelector(".drag-ready-badge");
-      if (badge) badge.remove();
-    });
-    setTimeout(() => { this._suppressCardClick = false; }, 250);
   },
 
   reorderProducts(sourceId, targetId) {

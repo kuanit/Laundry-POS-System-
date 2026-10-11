@@ -1103,24 +1103,35 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1rem;
+  padding: 0 0.85rem;
   z-index: 20;
   flex-shrink: 0;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
-.header-left, .header-right {
+.header-left {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .header-center {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .store-brand {
@@ -1247,14 +1258,17 @@ img {
 }
 
 .btn-logout {
-  padding: 0.5rem 0.85rem;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 0.85rem;
   border-radius: var(--radius-md);
   font-size: 0.82rem;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
 }
 
 /* POS MAIN LAYOUT (Tablet optimized 2-column split) */
@@ -1399,7 +1413,7 @@ img {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
   gap: 0.65rem;
   padding-bottom: 1.25rem;
 }
@@ -1522,26 +1536,56 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .product-card-price {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: #38bdf8;
   font-family: var(--font-heading);
+  line-height: 1.15;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+[data-theme="light"] .product-card-price {
+  color: var(--primary) !important;
+}
+
+.product-card-price small {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .btn-add-product {
-  height: 38px;
-  padding: 0 0.85rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  border-radius: var(--radius-md);
+  height: 32px;
+  padding: 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
   background: var(--primary);
   color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
 }
 .btn-add-product:hover {
   background: var(--primary-hover);
+}
+.btn-add-product i,
+.btn-add-product svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
 }
 
 /* ADMIN PRODUCT CARD GRID (CASHIER-STYLE) */
@@ -1568,63 +1612,44 @@ img {
 }
 
 .admin-product-card.card-press-holding {
-  transform: scale(0.97) !important;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.5) !important;
+  transform: scale(0.96) !important;
+  box-shadow: 0 0 0 3px var(--primary) !important;
   border-color: var(--primary) !important;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.admin-product-card.item-drag-enabled {
-  cursor: grab !important;
-  border: 2px dashed var(--primary) !important;
-  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.25), 0 12px 28px rgba(0, 0, 0, 0.45) !important;
-  animation: cardJiggle 0.35s ease-in-out infinite alternate !important;
-  z-index: 10;
-}
-
-@keyframes cardJiggle {
-  0% { transform: rotate(-0.85deg) scale(1.02); }
-  100% { transform: rotate(0.85deg) scale(1.02); }
-}
-
 .admin-product-card.is-dragging {
-  opacity: 0.35 !important;
-  transform: scale(0.95) !important;
-  cursor: grabbing !important;
-  animation: none !important;
+  opacity: 0.25 !important;
+  transform: scale(0.92) !important;
+  filter: grayscale(40%);
+  pointer-events: none;
 }
 
 .admin-product-card.drag-over {
-  border: 2px solid var(--primary) !important;
-  background: rgba(2, 132, 199, 0.08) !important;
-  transform: translateY(-8px) scale(1.02) !important;
-  box-shadow: 0 10px 25px rgba(2, 132, 199, 0.3) !important;
+  border: 2px dashed var(--primary) !important;
+  background: rgba(2, 132, 199, 0.12) !important;
+  transform: translateY(-6px) scale(1.02) !important;
+  box-shadow: 0 12px 28px rgba(2, 132, 199, 0.35) !important;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.drag-ready-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--primary);
-  color: #ffffff;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  z-index: 20;
-  pointer-events: none;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.drag-ready-badge svg {
-  width: 12px;
-  height: 12px;
+/* Floating drag ghost that follows cursor / finger */
+.drag-ghost-card {
+  position: fixed !important;
+  pointer-events: none !important;
+  z-index: 999999 !important;
+  background: var(--bg-surface) !important;
+  border: 2px solid var(--primary) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(2, 132, 199, 0.45) !important;
+  transform: translate(-50%, -50%) scale(1.06) rotate(1.5deg) !important;
+  opacity: 0.95 !important;
+  cursor: grabbing !important;
+  overflow: hidden !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  margin: 0 !important;
+  transition: transform 0.05s ease;
 }
 
 .admin-product-card.product-card-inactive {
@@ -4637,11 +4662,11 @@ img {
   }
 }
 
-/* Large Laptops & Standard Desktops (Max-Width: 1280px) */
-@media (max-width: 1280px) {
+/* Large Laptops & Standard Desktops (Max-Width: 1360px) */
+@media (max-width: 1360px) {
   .pos-header {
     padding: 0 0.85rem;
-    gap: 0.65rem;
+    gap: 0.5rem;
   }
 
   .live-clock .clock-date-part {
@@ -4658,76 +4683,10 @@ img {
   }
 
   .btn-header-action {
-    height: 40px;
-    padding: 0 0.75rem;
-    font-size: 0.82rem;
-    gap: 0.45rem;
-  }
-
-  .btn-logout {
-    padding: 0.45rem 0.75rem;
-    font-size: 0.8rem;
-  }
-}
-
-/* Medium Laptops & Compact Desktops (Max-Width: 1080px) */
-@media (max-width: 1080px) {
-  .pos-header {
-    padding: 0 0.75rem;
-    gap: 0.5rem;
-    height: 58px;
-    min-height: 58px;
-    max-height: 58px;
-  }
-
-  .store-icon-wrapper {
-    width: 34px;
-    height: 34px;
-  }
-
-  .store-name-display {
-    font-size: 1rem;
-  }
-
-  .pos-terminal-tag {
-    display: none;
-  }
-
-  .live-clock {
-    padding: 0.3rem 0.55rem;
-    font-size: 0.74rem;
-  }
-
-  .btn-header-action {
     height: 38px;
-    padding: 0 0.6rem;
+    padding: 0 0.65rem;
     font-size: 0.8rem;
-    gap: 0.4rem;
-  }
-
-  .btn-icon-nav {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-  }
-
-  .user-profile-badge {
-    padding: 0.2rem 0.5rem;
-    gap: 0.4rem;
-  }
-
-  .avatar-circle {
-    width: 28px;
-    height: 28px;
-    font-size: 0.75rem;
-  }
-
-  .user-name {
-    font-size: 0.78rem;
-  }
-
-  .user-role {
-    font-size: 0.6rem;
+    gap: 0.35rem;
   }
 
   .user-att-pill {
@@ -4736,8 +4695,111 @@ img {
 
   .btn-logout {
     height: 38px;
-    padding: 0.35rem 0.65rem;
-    font-size: 0.78rem;
+    min-height: 38px;
+    padding: 0 0.65rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Medium Laptops & Compact Desktops (Max-Width: 1220px) */
+@media (max-width: 1220px) {
+  .pos-header {
+    padding: 0 0.75rem;
+    gap: 0.45rem;
+  }
+
+  .btn-header-action .action-label {
+    display: none;
+  }
+
+  .btn-header-action {
+    height: 38px;
+    padding: 0 0.55rem;
+    gap: 0.3rem;
+  }
+
+  #btn-goto-admin .goto-admin-label {
+    display: none;
+  }
+
+  #btn-goto-admin {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    border-radius: var(--radius-md);
+  }
+
+  .pos-terminal-tag {
+    display: none;
+  }
+
+  .btn-logout .logout-label {
+    display: none;
+  }
+
+  .btn-logout {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+    justify-content: center;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* Narrow Laptops & Small Desktops (Max-Width: 1080px) */
+@media (max-width: 1080px) {
+  .pos-header {
+    padding: 0 0.65rem;
+    gap: 0.4rem;
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
+  }
+
+  .header-center {
+    display: none; /* Free up center space so action buttons never get cramped */
+  }
+
+  .store-icon-wrapper {
+    width: 34px;
+    height: 34px;
+  }
+
+  .store-name-display {
+    font-size: 0.98rem;
+  }
+
+  .btn-icon-nav {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  .user-profile-badge {
+    padding: 0;
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .avatar-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
+  }
+
+  .btn-logout {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+    justify-content: center;
+    flex-shrink: 0 !important;
   }
 }
 
