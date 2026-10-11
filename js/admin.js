@@ -265,7 +265,7 @@ const AdminPanel = {
     const recentSalesTbody = document.getElementById("dashboard-recent-sales-tbody");
     if (recentSalesTbody) {
       if (sales.length === 0) {
-        recentSalesTbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: #ffffff; font-weight: 600; padding: 2rem 1rem;">No laundry orders recorded yet.</td></tr>`;
+        recentSalesTbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-primary); font-weight: 600; padding: 2rem 1rem;">No laundry orders recorded yet.</td></tr>`;
       } else {
         let html = "";
         sales.slice(0, 6).forEach(s => {
@@ -313,7 +313,7 @@ const AdminPanel = {
     const topList = Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 
     if (topList.length === 0) {
-      container.innerHTML = `<p class="text-sm" style="color: #ffffff; font-weight: 600; padding: 2rem 0.5rem; margin: 0; text-align: center;">No sales data available yet.</p>`;
+      container.innerHTML = `<p class="text-sm" style="color: var(--text-primary); font-weight: 600; padding: 2rem 0.5rem; margin: 0; text-align: center;">No sales data available yet.</p>`;
       return;
     }
 
