@@ -265,7 +265,7 @@ const AdminPanel = {
     const recentSalesTbody = document.getElementById("dashboard-recent-sales-tbody");
     if (recentSalesTbody) {
       if (sales.length === 0) {
-        recentSalesTbody.innerHTML = `<tr><td colspan="6" class="text-muted text-center">No laundry orders recorded yet.</td></tr>`;
+        recentSalesTbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: #ffffff; font-weight: 600; padding: 2rem 1rem;">No laundry orders recorded yet.</td></tr>`;
       } else {
         let html = "";
         sales.slice(0, 6).forEach(s => {
@@ -313,7 +313,7 @@ const AdminPanel = {
     const topList = Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 
     if (topList.length === 0) {
-      container.innerHTML = `<p class="text-muted text-sm">No sales data available yet.</p>`;
+      container.innerHTML = `<p class="text-sm" style="color: #ffffff; font-weight: 600; padding: 2rem 0.5rem; margin: 0; text-align: center;">No sales data available yet.</p>`;
       return;
     }
 
@@ -3065,10 +3065,26 @@ const AdminPanel = {
     const monthPrefix = this.attendanceMonth;
     const monthRecords = allAttendance.filter(a => a.date && a.date.startsWith(monthPrefix));
 
-    // Calculate Monthly KPIs
+    // Calculate Monthly KPIs (accounting for active live shifts so on-duty time is included)
+    const getShiftDurationMinutes = (record) => {
+      if (record.status === "CLOCKED_IN" && record.timeIn) {
+        const ms = Date.now() - new Date(record.timeIn).getTime();
+        return Math.max(0, Math.round(ms / 60000));
+      }
+      return typeof record.totalMinutes === "number" ? record.totalMinutes : 0;
+    };
+
     const totalShifts = monthRecords.length;
-    const totalMinutes = monthRecords.reduce((sum, a) => sum + (a.totalMinutes || 0), 0);
+    const totalMinutes = monthRecords.reduce((sum, a) => sum + getShiftDurationMinutes(a), 0);
     const avgMinutes = totalShifts > 0 ? Math.round(totalMinutes / totalShifts) : 0;
+
+    const formatHoursKpi = (mins) => {
+      if (!mins || mins <= 0) return "0h 0m";
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h === 0) return `${m}m`;
+      return `${h}h ${m}m`;
+    };
 
     // Active now across all records
     const activeStaff = allAttendance.filter(a => a.status === "CLOCKED_IN");
@@ -3086,9 +3102,9 @@ const AdminPanel = {
 
     if (kpiShifts) kpiShifts.textContent = totalShifts;
     if (kpiShiftsSub) kpiShiftsSub.textContent = `${activeStaffCount} active today`;
-    if (kpiHours) kpiHours.textContent = typeof AttendanceManager !== "undefined" ? AttendanceManager.formatDuration(totalMinutes) : `${Math.floor(totalMinutes/60)}h ${totalMinutes%60}m`;
-    if (kpiHoursSub) kpiHoursSub.textContent = `Across ${totalShifts} shift logs`;
-    if (kpiAvg) kpiAvg.textContent = typeof AttendanceManager !== "undefined" ? AttendanceManager.formatDuration(avgMinutes) : `${Math.floor(avgMinutes/60)}h`;
+    if (kpiHours) kpiHours.textContent = formatHoursKpi(totalMinutes);
+    if (kpiHoursSub) kpiHoursSub.textContent = activeStaffCount > 0 ? `Across ${totalShifts} shift logs (live)` : `Across ${totalShifts} shift logs`;
+    if (kpiAvg) kpiAvg.textContent = formatHoursKpi(avgMinutes);
     if (kpiActive) kpiActive.textContent = activeStaffCount;
     if (kpiActiveNames) {
       if (activeStaffCount > 0) {

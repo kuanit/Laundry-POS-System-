@@ -14,9 +14,9 @@
   --border-color: #334155;
   --border-focus: #38bdf8;
   
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #ffffff;
+  --text-secondary: #f8fafc;
+  --text-muted: #f1f5f9;
   --text-inverse: #0f172a;
 
   /* Brand & Status Accents */
@@ -1084,9 +1084,9 @@ img {
   border: 1px solid var(--border-color);
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius-full);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -2200,13 +2200,15 @@ img {
 }
 
 .topbar-left .page-title {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
+  color: #ffffff;
 }
 
 .topbar-left .page-subtitle {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.82rem;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .topbar-right {
@@ -2287,33 +2289,35 @@ img {
 }
 
 .metric-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ffffff !important;
   letter-spacing: 0.5px;
 }
 
 .metric-value {
-  font-size: 1.75rem;
+  font-size: 1.85rem;
   font-weight: 800;
   margin: 0.25rem 0;
   font-family: var(--font-heading);
+  color: #ffffff;
 }
 
 .metric-trend {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.3rem;
 }
 .metric-trend.positive {
-  color: var(--success);
+  color: #34d399;
 }
 
 .metric-subtext {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ffffff !important;
 }
 
 .btn-link-action {
@@ -2384,10 +2388,10 @@ img {
 
 .data-table th {
   background: var(--bg-surface-elevated);
-  color: var(--text-secondary);
-  font-weight: 700;
-  padding: 0.75rem 1rem;
-  font-size: 0.8rem;
+  color: #ffffff !important;
+  font-weight: 800;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--border-color);
@@ -2396,7 +2400,7 @@ img {
 .data-table td {
   padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
+  color: #ffffff !important;
   vertical-align: middle;
 }
 
