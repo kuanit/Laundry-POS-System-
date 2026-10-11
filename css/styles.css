@@ -5868,25 +5868,63 @@ img {
 }
 
 /* =========================================================
-   COOL LAUNDRY OPENING SCREEN (WASHING MACHINE & BUBBLES)
+   ULTRA-MODERN LAUNDRY OPENING SCREEN (SMART APPLIANCE POD)
    ========================================================= */
 .laundry-splash-screen {
   position: fixed;
   inset: 0;
   z-index: 999999;
-  background: radial-gradient(circle at 50% 40%, #0f172a 0%, #060913 70%, #020408 100%);
+  background: radial-gradient(circle at 50% 35%, #0c1427 0%, #060913 65%, #020408 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s ease;
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1), filter 0.75s ease;
 }
 
 .laundry-splash-screen.fade-out {
   opacity: 0;
-  transform: scale(1.06);
-  filter: blur(8px);
+  transform: scale(1.08);
+  filter: blur(10px);
   pointer-events: none;
+}
+
+/* Ambient Glowing Aurora Background Blooms */
+.splash-ambient-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  opacity: 0.45;
+  z-index: 1;
+}
+
+.splash-ambient-glow.glow-1 {
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, #0284c7 0%, #38bdf8 40%, transparent 70%);
+  top: 15%;
+  left: 20%;
+  animation: pulseGlowOne 6s ease-in-out infinite alternate;
+}
+
+.splash-ambient-glow.glow-2 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, #7c3aed 0%, #a855f7 35%, transparent 70%);
+  bottom: 15%;
+  right: 20%;
+  animation: pulseGlowTwo 7s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlowOne {
+  0% { transform: translate(-20px, -20px) scale(0.9); opacity: 0.35; }
+  100% { transform: translate(30px, 30px) scale(1.15); opacity: 0.55; }
+}
+
+@keyframes pulseGlowTwo {
+  0% { transform: translate(25px, 20px) scale(1.1); opacity: 0.4; }
+  100% { transform: translate(-30px, -25px) scale(0.9); opacity: 0.6; }
 }
 
 /* Floating Soap Bubbles */
@@ -5895,138 +5933,214 @@ img {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 
 .soap-bubble {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.7) 0%, rgba(147, 197, 253, 0.25) 40%, rgba(192, 132, 252, 0.2) 70%, rgba(56, 189, 248, 0.4) 100%);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.75) 0%, rgba(147, 197, 253, 0.25) 45%, rgba(192, 132, 252, 0.25) 75%, rgba(56, 189, 248, 0.5) 100%);
   border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.4), 0 0 16px rgba(56, 189, 248, 0.2);
+  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.4), 0 0 18px rgba(56, 189, 248, 0.25);
   backdrop-filter: blur(1.5px);
   animation: floatBubbleUp linear infinite;
 }
 
 @keyframes floatBubbleUp {
-  0% {
-    transform: translateY(105vh) translateX(0) scale(0.85);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.85;
-  }
-  50% {
-    transform: translateY(50vh) translateX(25px) scale(1);
-    opacity: 0.95;
-  }
-  85% {
-    opacity: 0.75;
-  }
-  100% {
-    transform: translateY(-15vh) translateX(-20px) scale(1.1);
-    opacity: 0;
-  }
+  0% { transform: translateY(105vh) translateX(0) scale(0.85); opacity: 0; }
+  15% { opacity: 0.85; }
+  50% { transform: translateY(50vh) translateX(25px) scale(1); opacity: 0.95; }
+  85% { opacity: 0.75; }
+  100% { transform: translateY(-15vh) translateX(-20px) scale(1.1); opacity: 0; }
 }
 
-/* Splash Content Wrapper */
-.splash-content-wrapper {
+/* Ultra-Modern Glass Appliance Pod */
+.splash-modern-pod {
   position: relative;
   z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  width: 94%;
   max-width: 520px;
-  width: 92%;
-  text-align: center;
-}
-
-/* The Smart Washing Machine Cabinet */
-.washer-machine-cabinet {
-  position: relative;
-  width: 240px;
-  height: 240px;
-  background: linear-gradient(145deg, #1e293b, #0f172a);
+  background: rgba(13, 22, 44, 0.68);
+  backdrop-filter: blur(36px);
+  -webkit-backdrop-filter: blur(36px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 36px;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 45px rgba(56, 189, 248, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.2);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-  padding: 10px;
+  box-shadow: 
+    0 35px 80px -15px rgba(0, 0, 0, 0.85),
+    0 0 60px rgba(56, 189, 248, 0.18),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  padding: 1.6rem 2rem 1.8rem;
+  box-sizing: border-box;
+  text-align: center;
+  animation: podScaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Machine Top Bar */
-.washer-top-bar {
-  position: absolute;
-  top: 14px;
-  left: 20px;
-  right: 20px;
+@keyframes podScaleIn {
+  from { transform: scale(0.92) translateY(15px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Console Top Telemetry Bar */
+.pod-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 1.2rem;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.pod-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  color: #10b981;
+  font-weight: 700;
   letter-spacing: 0.5px;
 }
 
-.washer-power-led {
+.live-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-  animation: pulsePowerLed 1.2s infinite ease-in-out;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulseDot 1.4s infinite ease-in-out;
 }
 
-@keyframes pulsePowerLed {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.85); }
-}
-
-.washer-rpm-badge {
+.pod-eco-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
   color: #38bdf8;
   font-weight: 700;
-  background: rgba(56, 189, 248, 0.1);
-  padding: 1px 6px;
-  border-radius: 4px;
-  border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
-/* Circular Door Rim */
-.washer-door-rim {
+.pod-eco-badge i {
+  width: 12px;
+  height: 12px;
+}
+
+/* Washer Drum Section with Left/Right HUD Chips */
+.washer-drum-section {
   position: relative;
-  width: 174px;
-  height: 174px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #475569 0%, #1e293b 50%, #0f172a 100%);
-  border: 4px solid #64748b;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 2px 8px rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 16px;
+  gap: 1.1rem;
+  margin-bottom: 1.4rem;
 }
 
-/* Glowing LED Ring Track */
-.washer-led-track {
+/* Telemetry HUD Pills (Left & Right) */
+.washer-telemetry-chip {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 0.75rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 64px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.3s ease;
+}
+
+.washer-telemetry-chip .chip-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.washer-telemetry-chip.chip-right .chip-icon {
+  background: rgba(244, 63, 94, 0.14);
+  color: #f43f5e;
+}
+
+.chip-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chip-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.chip-lbl {
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* Futuristic Outer Bezel & Drum (270px) */
+.washer-modern-door {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #334155 0%, #1e293b 60%, #0f172a 100%);
+  border: 5px solid #475569;
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.7),
+    0 0 35px rgba(56, 189, 248, 0.3),
+    inset 0 3px 10px rgba(255, 255, 255, 0.4),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Chrome Hex Bolts */
+.bezel-bolt {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #cbd5e1, #64748b);
+  box-shadow: inset 0 1px 1px #fff, 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.bolt-top { top: 8px; left: 50%; transform: translateX(-50%); }
+.bolt-right { right: 8px; top: 50%; transform: translateY(-50%); }
+.bolt-bottom { bottom: 8px; left: 50%; transform: translateX(-50%); }
+.bolt-left { left: 8px; top: 50%; transform: translateY(-50%); }
+
+/* Neon Tachometer Glow Ring */
+.door-neon-ring {
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  border: 2px dashed rgba(56, 189, 248, 0.3);
+  border: 2px dashed rgba(56, 189, 248, 0.35);
   pointer-events: none;
-  animation: rotateLedTrack 8s linear infinite;
+  animation: rotateNeonTrack 7s linear infinite;
 }
 
-@keyframes rotateLedTrack {
+@keyframes rotateNeonTrack {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-.washer-led-runner {
+.door-neon-runner {
   position: absolute;
   top: 0;
   left: 50%;
@@ -6035,32 +6149,46 @@ img {
   height: 14px;
   border-radius: 50%;
   background: #38bdf8;
-  box-shadow: 0 0 16px #38bdf8, 0 0 30px #0284c7;
+  box-shadow: 0 0 18px #38bdf8, 0 0 35px #0284c7;
 }
 
-/* Glass Porthole Window */
-.washer-drum-porthole {
+/* Convex Crystal Glass Porthole */
+.door-glass-window {
   position: relative;
-  width: 144px;
-  height: 144px;
+  width: 216px;
+  height: 216px;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, #082f49 0%, #031e33 70%, #02121f 100%);
-  border: 3px solid rgba(15, 23, 42, 0.9);
+  background: radial-gradient(circle at 50% 50%, #032b49 0%, #021a2e 70%, #010f1c 100%);
+  border: 4px solid #0f172a;
   overflow: hidden;
-  box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9), 0 0 20px rgba(14, 165, 233, 0.35);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.95), 0 0 25px rgba(14, 165, 233, 0.4);
 }
 
-.drum-glass-reflection {
+.glass-specular-glare {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.08) 35%, transparent 60%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 35%, transparent 60%);
   pointer-events: none;
   z-index: 10;
   border-radius: 50%;
 }
 
+.glass-lens-glint {
+  position: absolute;
+  bottom: 12px;
+  right: 25px;
+  width: 45px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  filter: blur(3px);
+  transform: rotate(-35deg);
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* Drum Interior & Water Whirlpool */
-.drum-interior {
+.drum-chamber {
   position: absolute;
   inset: 0;
   display: flex;
@@ -6069,34 +6197,31 @@ img {
   overflow: hidden;
 }
 
+.drum-stainless-bg {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1.5px, transparent 1.5px);
+  background-size: 14px 14px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .water-vortex-layer {
   position: absolute;
-  inset: -10px;
-  border-radius: 40%;
-  opacity: 0.65;
+  inset: -15px;
+  border-radius: 42%;
+  opacity: 0.75;
   filter: blur(2px);
 }
 
-.water-vortex-layer.layer-back {
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.6) 0%, rgba(3, 105, 161, 0.3) 70%, transparent 100%);
+.water-vortex-layer.back-vortex {
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.65) 0%, rgba(3, 105, 161, 0.35) 65%, transparent 100%);
   animation: spinWaterBack 3s linear infinite;
 }
 
-.water-vortex-layer.layer-front {
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.5) 0%, rgba(14, 165, 233, 0.2) 60%, transparent 100%);
+.water-vortex-layer.front-vortex {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.55) 0%, rgba(14, 165, 233, 0.25) 55%, transparent 100%);
   animation: spinWaterFront 2.2s linear infinite reverse;
-}
-
-@keyframes spinWaterBack {
-  0% { transform: rotate(0deg) scale(0.95); }
-  50% { transform: rotate(180deg) scale(1.05); }
-  100% { transform: rotate(360deg) scale(0.95); }
-}
-
-@keyframes spinWaterFront {
-  0% { transform: rotate(0deg) scale(1.05); }
-  50% { transform: rotate(180deg) scale(0.95); }
-  100% { transform: rotate(360deg) scale(1.05); }
 }
 
 /* Tumbling Clothes Container */
@@ -6104,7 +6229,7 @@ img {
   position: absolute;
   width: 100%;
   height: 100%;
-  animation: spinClothes 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: spinClothes 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6112,92 +6237,68 @@ img {
 }
 
 .tumbling-clothes-container.spin-fast {
-  animation: spinClothes 0.8s linear infinite !important;
-}
-
-@keyframes spinClothes {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  animation: spinClothes 0.75s linear infinite !important;
 }
 
 .tumble-item {
   position: absolute;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
 }
 
 .item-shirt {
-  top: 18px;
-  left: 28px;
+  top: 25px;
+  left: 36px;
   color: #38bdf8;
   transform: rotate(-25deg);
   animation: wobbleShirt 1.8s ease-in-out infinite alternate;
 }
 
 .item-towel {
-  bottom: 24px;
-  right: 28px;
+  bottom: 30px;
+  right: 36px;
   color: #f43f5e;
   transform: rotate(35deg);
   animation: wobbleTowel 1.4s ease-in-out infinite alternate;
 }
 
 .item-sock {
-  top: 48px;
-  right: 22px;
+  top: 60px;
+  right: 28px;
   color: #10b981;
   transform: rotate(70deg);
   animation: wobbleSock 1.6s ease-in-out infinite alternate;
 }
 
-@keyframes wobbleShirt {
-  0% { transform: rotate(-35deg) scale(0.95); }
-  100% { transform: rotate(-15deg) scale(1.05); }
+.item-linen {
+  bottom: 50px;
+  left: 30px;
+  color: #fbbf24;
+  transform: rotate(-55deg);
+  animation: wobbleLinen 1.5s ease-in-out infinite alternate;
 }
 
-@keyframes wobbleTowel {
-  0% { transform: rotate(20deg) scale(1.05); }
-  100% { transform: rotate(45deg) scale(0.95); }
-}
-
-@keyframes wobbleSock {
-  0% { transform: rotate(60deg) scale(0.9); }
-  100% { transform: rotate(85deg) scale(1.1); }
+@keyframes wobbleLinen {
+  0% { transform: rotate(-65deg) scale(0.9); }
+  100% { transform: rotate(-45deg) scale(1.05); }
 }
 
 /* Soap Suds Froth Clouds */
 .soap-suds-cloud {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(224, 242, 254, 0.6) 60%, rgba(255, 255, 255, 0) 100%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(224, 242, 254, 0.65) 60%, rgba(255, 255, 255, 0) 100%);
   filter: blur(1.5px);
   z-index: 5;
   animation: foamBubble 2.5s ease-in-out infinite alternate;
 }
 
-.suds-1 { width: 34px; height: 34px; bottom: 20px; left: 30px; animation-delay: 0s; }
-.suds-2 { width: 44px; height: 44px; top: 25px; right: 28px; animation-delay: 0.4s; }
-.suds-3 { width: 28px; height: 28px; bottom: 32px; right: 40px; animation-delay: 0.8s; }
-.suds-4 { width: 38px; height: 38px; top: 38px; left: 24px; animation-delay: 1.2s; }
+.suds-1 { width: 44px; height: 44px; bottom: 25px; left: 35px; animation-delay: 0s; }
+.suds-2 { width: 55px; height: 55px; top: 30px; right: 35px; animation-delay: 0.4s; }
+.suds-3 { width: 36px; height: 36px; bottom: 40px; right: 50px; animation-delay: 0.8s; }
+.suds-4 { width: 48px; height: 48px; top: 48px; left: 30px; animation-delay: 1.2s; }
 
-@keyframes foamBubble {
-  0% { transform: scale(0.85) translate(0, 0); opacity: 0.7; }
-  100% { transform: scale(1.2) translate(4px, -6px); opacity: 0.95; }
-}
-
-.washer-door-handle {
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 8px;
-  height: 38px;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #94a3b8, #475569);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-}
-
-/* Splash Information Box */
-.splash-info-box {
+/* Pod Info Center */
+.pod-info-center {
   width: 100%;
 }
 
@@ -6205,132 +6306,185 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0.35rem 0.85rem;
+  padding: 0.35rem 0.9rem;
   border-radius: var(--radius-full);
   background: rgba(56, 189, 248, 0.12);
   border: 1px solid rgba(56, 189, 248, 0.3);
   color: #38bdf8;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.splash-badge i {
+  width: 13px;
+  height: 13px;
 }
 
 .splash-store-title {
   font-family: 'Outfit', sans-serif;
-  font-size: 2.1rem;
+  font-size: 2.15rem;
   font-weight: 800;
   margin: 0 0 0.3rem;
-  background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 40%, #38bdf8 70%, #818cf8 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 40%, #38bdf8 75%, #818cf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   text-shadow: 0 10px 30px rgba(56, 189, 248, 0.25);
+  letter-spacing: -0.5px;
 }
 
 .splash-status-sub {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   color: #94a3b8;
-  margin: 0 0 1.2rem;
+  margin: 0 0 1.25rem;
   min-height: 22px;
+  line-height: 1.4;
 }
 
-/* Wash Cycle Stepper */
-.wash-cycle-stepper {
+/* Modern Segmented Wash Cycle Stepper */
+.modern-cycle-stepper {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1.1rem;
-}
-
-.cycle-step {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0.35rem 0.65rem;
+  justify-content: space-between;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 1.15rem;
+}
+
+.modern-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0.2rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s ease;
+}
+
+.step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.step-label {
   font-size: 0.75rem;
   font-weight: 700;
   color: #64748b;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.35s ease;
+  letter-spacing: 0.5px;
 }
 
-.cycle-step i {
-  width: 14px;
-  height: 14px;
-}
-
-.cycle-step.active {
-  color: #fff;
+.modern-step.active {
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(99, 102, 241, 0.25));
-  border-color: #38bdf8;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
-  transform: translateY(-2px);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
 }
 
-.cycle-step.completed {
+.modern-step.active .step-num {
+  color: #38bdf8;
+}
+
+.modern-step.active .step-label {
+  color: #fff;
+}
+
+.modern-step.completed .step-num,
+.modern-step.completed .step-label {
   color: #10b981;
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.1);
 }
 
-.cycle-step-arrow {
-  color: #475569;
-  font-size: 0.9rem;
-  font-weight: 700;
+.step-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* Progress Track */
-.splash-progress-track {
+/* Shimmer Fluid Progress Bar */
+.modern-progress-box {
+  width: 100%;
+  margin-bottom: 1.1rem;
+}
+
+.modern-progress-track {
   position: relative;
   width: 100%;
-  height: 8px;
+  height: 7px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-full);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  margin-bottom: 0.5rem;
 }
 
-.splash-progress-fill {
+.modern-progress-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #38bdf8 0%, #6366f1 60%, #a855f7 100%);
+  background: linear-gradient(90deg, #38bdf8 0%, #6366f1 50%, #c084fc 100%);
   border-radius: var(--radius-full);
-  box-shadow: 0 0 12px #38bdf8;
-  transition: width 0.15s ease-out;
+  box-shadow: 0 0 14px #38bdf8;
+  transition: width 0.12s ease-out;
 }
 
-.splash-progress-meta {
+.modern-progress-shimmer {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: shimmerProgress 1.6s infinite ease-in-out;
+}
+
+@keyframes shimmerProgress {
+  0% { left: -50%; }
+  100% { left: 150%; }
+}
+
+.modern-progress-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.78rem;
   color: #94a3b8;
+  margin-top: 0.45rem;
 }
 
-/* Skip Button */
-.splash-skip-btn {
-  margin-top: 1.25rem;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #94a3b8;
-  padding: 0.4rem 0.9rem;
+.modern-percent-num {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* Modern Skip Button */
+.modern-skip-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  padding: 0.45rem 1.1rem;
   border-radius: var(--radius-full);
   font-size: 0.78rem;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(10px);
 }
 
-.splash-skip-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+.modern-skip-btn:hover {
+  background: rgba(56, 189, 248, 0.12);
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
   transform: translateY(-1px);
+}
+
+.modern-skip-btn i {
+  width: 14px;
+  height: 14px;
 }
 
