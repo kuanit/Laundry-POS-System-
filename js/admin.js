@@ -21,6 +21,15 @@ const AdminPanel = {
     this.renderDashboard();
     this.populateCategorySelects();
 
+    if (!this._dragDocListenerAttached) {
+      this._dragDocListenerAttached = true;
+      document.addEventListener("click", (e) => {
+        if (this._activeDragCardId && !e.target.closest(".admin-product-card")) {
+          this.cleanupDragStates();
+        }
+      });
+    }
+
     if (!this._syncListenerAttached) {
       this._syncListenerAttached = true;
       window.addEventListener("pos-data-synced", () => {
@@ -28,7 +37,7 @@ const AdminPanel = {
         this.populateCategorySelects();
         if (this.currentTab === "dashboard") this.renderDashboard();
         else if (this.currentTab === "orders" || this.currentTab === "laundry") (this.renderLaundryOrders ? this.renderLaundryOrders() : this.renderLaundryTable());
-        else if (this.currentTab === "catalog" || this.currentTab === "products") (this.renderProducts ? this.renderProducts() : this.renderProductsTable());
+        else if ((this.currentTab === "catalog" || this.currentTab === "products") && !this._activeDragCardId) (this.renderProducts ? this.renderProducts() : this.renderProductsTable());
         else if (this.currentTab === "categories") this.renderCategories();
         else if (this.currentTab === "inventory") (this.renderInventory ? this.renderInventory() : this.renderInventoryTable());
         else if (this.currentTab === "sales") (this.renderSalesHistory ? this.renderSalesHistory() : this.renderSalesTable());
@@ -446,12 +455,15 @@ const AdminPanel = {
     const pillsContainer = document.getElementById("admin-category-pills");
 
     if (filterSelect) {
+      const curFilter = filterSelect.value;
       let html = `<option value="">All Categories</option>`;
       categories.forEach(c => { html += `<option value="${c.id}">${c.name}</option>`; });
       filterSelect.innerHTML = html;
+      if (curFilter) filterSelect.value = curFilter;
     }
 
     if (formSelect) {
+      const curSelected = formSelect.value;
       let html = "";
       if (categories.length === 0) {
         html = `<option value="">-- No Categories (Add in Categories tab) --</option>`;
@@ -459,6 +471,9 @@ const AdminPanel = {
         categories.forEach(c => { html += `<option value="${c.id}">${c.name}</option>`; });
       }
       formSelect.innerHTML = html;
+      if (curSelected && categories.some(c => c.id === curSelected)) {
+        formSelect.value = curSelected;
+      }
     }
 
     if (pillsContainer) {
@@ -615,9 +630,23 @@ const AdminPanel = {
 
         gridHtml += `
           <div class="admin-product-card ${p.status === 'inactive' ? 'product-card-inactive' : ''}" 
-               onclick="AdminPanel.editProduct('${p.id}')">
+               id="prod-card-${p.id}"
+               data-id="${p.id}"
+               onmousedown="AdminPanel.handleCardPressStart(event, '${p.id}')"
+               onmouseup="AdminPanel.handleCardPressEnd(event)"
+               onmouseleave="AdminPanel.handleCardPressEnd(event)"
+               ontouchstart="AdminPanel.handleCardTouchStart(event, '${p.id}')"
+               ontouchend="AdminPanel.handleCardTouchEnd(event)"
+               ontouchcancel="AdminPanel.handleCardTouchEnd(event)"
+               ontouchmove="AdminPanel.handleCardTouchMove(event)"
+               ondragstart="AdminPanel.handleDragStart(event, '${p.id}')"
+               ondragover="AdminPanel.handleDragOver(event, '${p.id}')"
+               ondragleave="AdminPanel.handleDragLeave(event, '${p.id}')"
+               ondrop="AdminPanel.handleDrop(event, '${p.id}')"
+               ondragend="AdminPanel.handleDragEnd(event)"
+               onclick="AdminPanel.handleCardClick(event, '${p.id}')">
             <div class="admin-product-card-img">
-              <img src="${displayImg}" alt="${p.name}" loading="lazy" onerror="this.src='${placeholder}'">
+              <img src="${displayImg}" alt="${p.name}" draggable="false" loading="lazy" onerror="this.src='${placeholder}'">
               <span class="admin-card-status-badge ${statusClass}">${p.status.toUpperCase()}</span>
               <span class="admin-card-type-badge ${stockBadgeClass}">${stockBadgeText}</span>
             </div>
@@ -688,6 +717,194 @@ const AdminPanel = {
     }
 
     if (window.lucide) lucide.createIcons();
+  },
+
+  /* =========================================================
+     DRAG & DROP REORDER (PRESS & HOLD 1.5s TO ACTIVATE)
+     ========================================================= */
+  _pressTimer: null,
+  _pressStartPos: null,
+  _activeDragCardId: null,
+  _suppressCardClick: false,
+  _draggedItemId: null,
+  _touchDraggingTargetId: null,
+
+  handleCardPressStart(e, prodId) {
+    if (e.target.closest("button") || e.target.closest("a") || e.target.closest("input")) return;
+    this.startLongPress(e.clientX, e.clientY, prodId);
+  },
+
+  handleCardPressEnd(e) {
+    this.cancelLongPress();
+  },
+
+  handleCardTouchStart(e, prodId) {
+    if (e.target.closest("button") || e.target.closest("a") || e.target.closest("input")) return;
+    if (e.touches && e.touches.length > 0) {
+      const t = e.touches[0];
+      this.startLongPress(t.clientX, t.clientY, prodId);
+    }
+  },
+
+  handleCardTouchEnd(e) {
+    this.cancelLongPress();
+    if (this._touchDraggingTargetId && this._activeDragCardId) {
+      this.reorderProducts(this._activeDragCardId, this._touchDraggingTargetId);
+      this.cleanupDragStates();
+    }
+  },
+
+  handleCardTouchMove(e) {
+    if (this._pressTimer && this._pressStartPos && e.touches && e.touches.length > 0) {
+      const t = e.touches[0];
+      const dist = Math.hypot(t.clientX - this._pressStartPos.x, t.clientY - this._pressStartPos.y);
+      if (dist > 10) this.cancelLongPress();
+    }
+    if (this._activeDragCardId && e.touches && e.touches.length > 0) {
+      e.preventDefault();
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY)?.closest(".admin-product-card");
+      document.querySelectorAll(".admin-product-card.drag-over").forEach(c => c.classList.remove("drag-over"));
+      if (el && el.dataset.id && el.dataset.id !== this._activeDragCardId) {
+        el.classList.add("drag-over");
+        this._touchDraggingTargetId = el.dataset.id;
+      } else {
+        this._touchDraggingTargetId = null;
+      }
+    }
+  },
+
+  startLongPress(clientX, clientY, prodId) {
+    this.cancelLongPress();
+    this._pressStartPos = { x: clientX, y: clientY };
+
+    const card = document.getElementById(`prod-card-${prodId}`);
+    if (card) card.classList.add("card-press-holding");
+
+    this._pressTimer = setTimeout(() => {
+      this._pressTimer = null;
+      if (card) card.classList.remove("card-press-holding");
+      this.enableDragForCard(prodId);
+    }, 1500); // 1.5 seconds press and hold requirement
+  },
+
+  cancelLongPress() {
+    if (this._pressTimer) {
+      clearTimeout(this._pressTimer);
+      this._pressTimer = null;
+    }
+    document.querySelectorAll(".admin-product-card.card-press-holding").forEach(c => c.classList.remove("card-press-holding"));
+  },
+
+  enableDragForCard(prodId) {
+    this._activeDragCardId = prodId;
+    this._suppressCardClick = true;
+
+    // Reset previous drag states on any other cards
+    document.querySelectorAll(".admin-product-card").forEach(c => {
+      c.removeAttribute("draggable");
+      c.classList.remove("item-drag-enabled", "is-dragging", "drag-over");
+      const oldBadge = c.querySelector(".drag-ready-badge");
+      if (oldBadge) oldBadge.remove();
+    });
+
+    const card = document.getElementById(`prod-card-${prodId}`);
+    if (card) {
+      card.setAttribute("draggable", "true");
+      card.classList.add("item-drag-enabled");
+
+      const badge = document.createElement("span");
+      badge.className = "drag-ready-badge";
+      badge.innerHTML = `<i data-lucide="move"></i> Ready to Move`;
+      card.appendChild(badge);
+      if (window.lucide) lucide.createIcons();
+
+      if (navigator.vibrate) navigator.vibrate(50);
+      App.showToast("Hold detected! Drag this item to rearrange.", "info");
+    }
+  },
+
+  handleCardClick(e, prodId) {
+    if (this._suppressCardClick) {
+      this._suppressCardClick = false;
+      return;
+    }
+    if (this._activeDragCardId === prodId) {
+      this.cleanupDragStates();
+      return;
+    }
+    this.editProduct(prodId);
+  },
+
+  handleDragStart(e, prodId) {
+    if (this._activeDragCardId !== prodId) {
+      e.preventDefault();
+      return;
+    }
+    this._draggedItemId = prodId;
+    e.dataTransfer.setData("text/plain", prodId);
+    e.dataTransfer.effectAllowed = "move";
+    const card = document.getElementById(`prod-card-${prodId}`);
+    if (card) card.classList.add("is-dragging");
+  },
+
+  handleDragOver(e, targetId) {
+    if (!this._activeDragCardId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const card = document.getElementById(`prod-card-${targetId}`);
+    if (card && targetId !== this._activeDragCardId) {
+      card.classList.add("drag-over");
+    }
+  },
+
+  handleDragLeave(e, targetId) {
+    const card = document.getElementById(`prod-card-${targetId}`);
+    if (card) card.classList.remove("drag-over");
+  },
+
+  handleDrop(e, targetId) {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData("text/plain") || this._draggedItemId;
+    this.cleanupDragStates();
+
+    if (sourceId && targetId && sourceId !== targetId) {
+      this.reorderProducts(sourceId, targetId);
+    }
+  },
+
+  handleDragEnd(e) {
+    this.cleanupDragStates();
+  },
+
+  cleanupDragStates() {
+    this._activeDragCardId = null;
+    this._draggedItemId = null;
+    this._touchDraggingTargetId = null;
+    this.cancelLongPress();
+    document.querySelectorAll(".admin-product-card").forEach(c => {
+      c.removeAttribute("draggable");
+      c.classList.remove("item-drag-enabled", "is-dragging", "drag-over", "card-press-holding");
+      const badge = c.querySelector(".drag-ready-badge");
+      if (badge) badge.remove();
+    });
+    setTimeout(() => { this._suppressCardClick = false; }, 250);
+  },
+
+  reorderProducts(sourceId, targetId) {
+    const data = StorageManager.get();
+    const products = data.products || [];
+    const fromIdx = products.findIndex(p => p.id === sourceId);
+    const toIdx = products.findIndex(p => p.id === targetId);
+
+    if (fromIdx > -1 && toIdx > -1) {
+      const [moved] = products.splice(fromIdx, 1);
+      products.splice(toIdx, 0, moved);
+      data.products = products;
+      StorageManager.save(data);
+      this.renderProductsTable();
+      App.showToast(`Rearranged: "${moved.name}" moved to position #${toIdx + 1}`, "success");
+    }
   },
 
   openProductModal(isEdit = false) {
@@ -831,7 +1048,14 @@ const AdminPanel = {
     const brandInput = document.getElementById("prod-brand");
     if (brandInput) brandInput.value = prod.brand || this.detectBrand(prod.name) || "";
     document.getElementById("prod-sku").value = prod.sku || "";
-    document.getElementById("prod-category").value = prod.categoryId;
+    const catSelect = document.getElementById("prod-category");
+    if (catSelect) {
+      catSelect.value = prod.categoryId || "";
+      if (!catSelect.value && prod.categoryId) {
+        const matched = (data.categories || []).find(c => c.id === prod.categoryId || c.name.toLowerCase() === String(prod.categoryId).toLowerCase());
+        if (matched) catSelect.value = matched.id;
+      }
+    }
     document.getElementById("prod-unit").value = prod.unit || "pc";
     document.getElementById("prod-barcode").value = prod.barcode || "";
     const costVal = (prod.costPrice !== undefined && prod.costPrice > 0) ? prod.costPrice : (prod.price || 0);
@@ -931,7 +1155,7 @@ const AdminPanel = {
       name: nameVal,
       brand: brandVal,
       sku: document.getElementById("prod-sku").value.trim(),
-      categoryId: document.getElementById("prod-category").value,
+      categoryId: (document.getElementById("prod-category")?.value || (data.categories?.[0]?.id) || "").trim(),
       unit: document.getElementById("prod-unit").value,
       barcode: document.getElementById("prod-barcode").value.trim(),
       price: costVal,

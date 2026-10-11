@@ -187,38 +187,54 @@ const StorageManager = {
     return modified;
   },
 
+  _lastSaveTs: 0,
+  _isSaving: false,
+
   save(data) {
     try {
+      this._lastSaveTs = Date.now();
+      this._isSaving = true;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      localStorage.setItem(LAST_SYNC_KEY, Date.now().toString());
+      localStorage.setItem(LAST_SYNC_KEY, this._lastSaveTs.toString());
 
       // Send to server backend asynchronously
       this.pushToServer(data);
       return true;
     } catch (e) {
+      this._isSaving = false;
       console.error("Storage save error:", e);
       return false;
     }
   },
 
   async pushToServer(data) {
-    const res = await fetch(getApiUrl("/api/data"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Failed to write data to server database.");
-    }
-    const result = await res.json().catch(() => ({}));
-    if (result.lastUpdated) {
-      localStorage.setItem(LAST_SYNC_KEY, result.lastUpdated.toString());
+    try {
+      const res = await fetch(getApiUrl("/api/data"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data })
+      });
+      if (!res.ok) {
+        console.warn("Server push response status:", res.status);
+        return;
+      }
+      const result = await res.json().catch(() => ({}));
+      if (result.lastUpdated) {
+        localStorage.setItem(LAST_SYNC_KEY, result.lastUpdated.toString());
+      }
+    } catch (err) {
+      console.warn("Server push error:", err.message);
+    } finally {
+      this._isSaving = false;
     }
   },
 
   async fetchFromServer(forceRefresh = false) {
     if (this._isSyncing) return;
+    // Protect recent local edits from being overwritten by slower in-flight GET responses
+    if (!forceRefresh && (this._isSaving || Date.now() - (this._lastSaveTs || 0) < 4000)) {
+      return;
+    }
     this._isSyncing = true;
 
     try {
@@ -227,6 +243,11 @@ const StorageManager = {
 
       const result = await res.json();
       if (result.success && result.data) {
+        // Double check save state right after network response arrives
+        if (!forceRefresh && (this._isSaving || Date.now() - (this._lastSaveTs || 0) < 4000)) {
+          return;
+        }
+
         const localData = localStorage.getItem(STORAGE_KEY);
         const serverJson = JSON.stringify(result.data);
 

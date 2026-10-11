@@ -1471,12 +1471,74 @@ img {
   position: relative;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
 }
 
 .admin-product-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
   border-color: rgba(56, 189, 248, 0.4);
+}
+
+.admin-product-card.card-press-holding {
+  transform: scale(0.97) !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.5) !important;
+  border-color: var(--primary) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-product-card.item-drag-enabled {
+  cursor: grab !important;
+  border: 2px dashed var(--primary) !important;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.25), 0 12px 28px rgba(0, 0, 0, 0.45) !important;
+  animation: cardJiggle 0.35s ease-in-out infinite alternate !important;
+  z-index: 10;
+}
+
+@keyframes cardJiggle {
+  0% { transform: rotate(-0.85deg) scale(1.02); }
+  100% { transform: rotate(0.85deg) scale(1.02); }
+}
+
+.admin-product-card.is-dragging {
+  opacity: 0.35 !important;
+  transform: scale(0.95) !important;
+  cursor: grabbing !important;
+  animation: none !important;
+}
+
+.admin-product-card.drag-over {
+  border: 2px solid var(--primary) !important;
+  background: rgba(2, 132, 199, 0.08) !important;
+  transform: translateY(-8px) scale(1.02) !important;
+  box-shadow: 0 10px 25px rgba(2, 132, 199, 0.3) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.drag-ready-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drag-ready-badge svg {
+  width: 12px;
+  height: 12px;
 }
 
 .admin-product-card.product-card-inactive {
@@ -1497,6 +1559,9 @@ img {
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s ease;
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
 }
 .admin-product-card:hover .admin-product-card-img img {
   transform: scale(1.05);

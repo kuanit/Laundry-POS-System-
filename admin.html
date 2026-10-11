@@ -964,24 +964,11 @@
           <div class="form-group">
             <label for="prod-image-url">Image URL</label>
             <div class="input-with-preview">
-              <input type="text" id="prod-image-url" placeholder="https://images.unsplash.com/... or choose preset"
+              <input type="text" id="prod-image-url" placeholder="https://images.unsplash.com/... or paste image URL"
                 oninput="AdminPanel.previewImage(this.value)">
               <div class="image-preview-thumb" id="prod-img-preview">
                 <i data-lucide="image"></i>
               </div>
-            </div>
-            <div class="preset-images-picker">
-              <span>Presets:</span>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('wash')">🧺 Wash & Fold</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('suit')">👔 Dry Clean Suit</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('barong')">🇵🇭 Barong</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('press')">♨️ Steam Press</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('duvet')">🛏️ Comforter</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('shoes')">👟 Sneakers</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('powder_detergent')">🧼 Powder Detergent</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('liquid_detergent')">🧴 Liquid Detergent</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('fabcon')">🌸 Fabcon</button>
-              <button type="button" class="img-chip" onclick="AdminPanel.setPresetImage('bleach')">✨ Bleach Booster</button>
             </div>
           </div>
 
