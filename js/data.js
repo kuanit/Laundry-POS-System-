@@ -28,6 +28,7 @@ const SEED_DATA = {
       role: "ADMIN",
       status: "active",
       isMaster: true,
+      theme: "dark",
       createdAt: "2026-01-01T00:00:00.000Z"
     }
   ],
@@ -347,6 +348,44 @@ const StorageManager = {
     currentData.users = result.users || [];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
     return result.user;
+  },
+
+  async updateUserTheme(userId, theme) {
+    if (!userId || !theme) return;
+    // 1. Immediately update local cache
+    const currentData = this.get();
+    if (Array.isArray(currentData.users)) {
+      const u = currentData.users.find(x => x.id === userId || x.username === userId);
+      if (u) {
+        u.theme = theme;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
+      }
+    }
+
+    // 2. Persist to server database via targeted theme endpoint
+    try {
+      const res = await fetch(getApiUrl(`/api/users/${encodeURIComponent(userId)}/theme`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme })
+      });
+      if (res.ok) {
+        const result = await res.json().catch(() => ({}));
+        if (result.lastUpdated) {
+          localStorage.setItem(LAST_SYNC_KEY, result.lastUpdated.toString());
+        }
+        return;
+      }
+    } catch (e) {
+      console.warn("Theme API endpoint notice:", e.message);
+    }
+
+    // Fallback: update user record directly
+    try {
+      await this.updateUser(userId, { theme });
+    } catch (err) {
+      this.pushToServer(currentData).catch(() => {});
+    }
   },
 
   async deleteUser(userId) {

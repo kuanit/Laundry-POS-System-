@@ -21,6 +21,18 @@
   <!-- HTML5 QR Code / Barcode Scanner CDN -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
+  <!-- Instant Theme Guard to eliminate flicker -->
+  <script>
+    (function () {
+      try {
+        var userStr = localStorage.getItem("POS_ACTIVE_USER") || sessionStorage.getItem("POS_ACTIVE_USER");
+        var user = userStr ? JSON.parse(userStr) : null;
+        var theme = (user && user.theme) || localStorage.getItem("POS_THEME") || "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {}
+    })();
+  </script>
+
   <link rel="stylesheet" href="css/styles.css?v=3.2">
 </head>
 
@@ -1599,9 +1611,9 @@
 
       init() {
         Sound.init();
+        this.checkAuth();
         this.initTheme();
         this.startLiveClock();
-        this.checkAuth();
         this.startHeartbeat();
         this.setupUnloadBeacon();
 
@@ -1667,10 +1679,22 @@
         if (!this.currentUser || this._isLoggingOut) return;
         const data = freshData || StorageManager.get();
 
-        const dbUser = (data.users || []).find(u => u.id === this.currentUser.id);
+        const dbUser = (data.users || []).find(u => u.id === this.currentUser.id || (this.currentUser.username && u.username === this.currentUser.username));
         if (dbUser && dbUser.status === "disabled") {
           this.forceLogout("Your Admin account has been deactivated.");
           return;
+        }
+
+        // Sync theme preference if changed in database on another device
+        if (dbUser && dbUser.theme && dbUser.theme !== document.documentElement.getAttribute("data-theme")) {
+          this.currentUser.theme = dbUser.theme;
+          try {
+            localStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+            sessionStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+          } catch(e) {}
+          document.documentElement.setAttribute("data-theme", dbUser.theme);
+          localStorage.setItem("POS_THEME", dbUser.theme);
+          this.updateThemeIcon(dbUser.theme);
         }
 
         this.updateHeader();
@@ -1739,8 +1763,21 @@
       },
 
       initTheme() {
-        const saved = localStorage.getItem("POS_THEME") || "dark";
+        let saved = "dark";
+        if (this.currentUser && this.currentUser.theme) {
+          saved = this.currentUser.theme;
+        } else {
+          try {
+            const userStr = localStorage.getItem("POS_ACTIVE_USER") || sessionStorage.getItem("POS_ACTIVE_USER");
+            const u = userStr ? JSON.parse(userStr) : null;
+            if (u && u.theme) saved = u.theme;
+          } catch (e) {}
+          if (saved === "dark") {
+            saved = localStorage.getItem("POS_THEME") || "dark";
+          }
+        }
         document.documentElement.setAttribute("data-theme", saved);
+        localStorage.setItem("POS_THEME", saved);
         this.updateThemeIcon(saved);
       },
 
@@ -1750,6 +1787,19 @@
         document.documentElement.setAttribute("data-theme", next);
         localStorage.setItem("POS_THEME", next);
         this.updateThemeIcon(next);
+
+        // Persist theme to user account in database & session
+        if (this.currentUser) {
+          this.currentUser.theme = next;
+          try {
+            localStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+            sessionStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+          } catch(e) {}
+
+          if (typeof StorageManager !== "undefined" && StorageManager.updateUserTheme) {
+            StorageManager.updateUserTheme(this.currentUser.id || this.currentUser.username, next);
+          }
+        }
       },
 
       updateThemeIcon(theme) {

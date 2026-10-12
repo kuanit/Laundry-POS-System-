@@ -54,6 +54,7 @@ const CLEAN_SEED_DATA = {
       role: "ADMIN",
       status: "active",
       isMaster: true,
+      theme: "dark",
       createdAt: "2026-01-01T00:00:00.000Z"
     }
   ],
@@ -716,6 +717,7 @@ const server = http.createServer(async (req, res) => {
           autoDisableDailyTime: newUser.autoDisableDailyOut || newUser.autoDisableDailyTime || "17:00",
           autoDisabledAt: newUser.autoDisabledAt || null,
           autoDisableReason: newUser.autoDisableReason || null,
+          theme: newUser.theme || "dark",
           createdAt: new Date().toISOString()
         };
 
@@ -737,7 +739,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // 5. PUT /api/users/:id
-    if (pathname.startsWith('/api/users/') && method === 'PUT') {
+    if (pathname.startsWith('/api/users/') && !pathname.endsWith('/theme') && method === 'PUT') {
       try {
         const targetId = decodeURIComponent(pathname.replace('/api/users/', ''));
         const raw = await readBody(req);
@@ -765,6 +767,9 @@ const server = http.createServer(async (req, res) => {
         existing.fullName = updates.fullName ? updates.fullName.trim() : existing.fullName;
         if (updates.password) {
           existing.password = updates.password;
+        }
+        if (updates.theme !== undefined) {
+          existing.theme = updates.theme;
         }
         if (!isMaster) {
           existing.role = updates.role || existing.role;
@@ -806,6 +811,33 @@ const server = http.createServer(async (req, res) => {
           users: dbData.users,
           lastUpdated: lastUpdatedTimestamp
         });
+      } catch (err) {
+        return sendJson(res, 400, { success: false, error: err.message });
+      }
+    }
+
+    // 5b. PUT /api/users/:id/theme (Fast user theme persistence)
+    if (pathname.startsWith('/api/users/') && pathname.endsWith('/theme') && method === 'PUT') {
+      try {
+        const targetId = decodeURIComponent(pathname.replace('/api/users/', '').replace('/theme', ''));
+        const raw = await readBody(req);
+        const { theme } = JSON.parse(raw);
+        if (!theme || (theme !== 'dark' && theme !== 'light')) {
+          return sendJson(res, 400, { success: false, error: 'Invalid theme value' });
+        }
+
+        const dbData = loadServerData();
+        const idx = (dbData.users || []).findIndex(u => u.id === targetId || u.username.toLowerCase() === targetId.toLowerCase());
+        if (idx !== -1) {
+          dbData.users[idx].theme = theme;
+          saveServerData(dbData);
+          return sendJson(res, 200, {
+            success: true,
+            theme: theme,
+            lastUpdated: lastUpdatedTimestamp
+          });
+        }
+        return sendJson(res, 404, { success: false, error: 'User not found in database.' });
       } catch (err) {
         return sendJson(res, 400, { success: false, error: err.message });
       }
@@ -903,7 +935,8 @@ const server = http.createServer(async (req, res) => {
             isMaster: !!user.isMaster,
             status: user.status,
             activeSessionId: sessionId,
-            isOnline: true
+            isOnline: true,
+            theme: user.theme || 'dark'
           }
         });
       } catch (err) {
@@ -1043,7 +1076,8 @@ const server = http.createServer(async (req, res) => {
             isMaster: !!user.isMaster,
             status: user.status,
             activeSessionId: user.activeSessionId,
-            isOnline: user.isOnline
+            isOnline: user.isOnline,
+            theme: user.theme || 'dark'
           }
         });
       } catch (err) {
