@@ -1319,8 +1319,8 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 1;
-  min-width: 0;
+  flex-shrink: 0;
+  min-width: max-content;
 }
 
 .header-right {
@@ -1328,7 +1328,7 @@ img {
   align-items: center;
   justify-content: flex-end;
   gap: 0.45rem;
-  flex-shrink: 1;
+  flex-shrink: 0;
   min-width: 0;
 }
 
@@ -4860,8 +4860,8 @@ img {
   }
 }
 
-/* Large Laptops & Standard Desktops (Max-Width: 1360px) */
-@media (max-width: 1360px) {
+/* Standard Desktops, Laptops & High-DPI Displays (Max-Width: 1560px) */
+@media (max-width: 1560px) {
   .pos-header {
     padding: 0 0.85rem;
     gap: 0.5rem;
@@ -4873,22 +4873,35 @@ img {
 
   .live-clock {
     padding: 0.35rem 0.65rem;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
   }
 
   .pos-terminal-tag .tag-sub {
     display: none;
   }
 
-  .btn-header-action {
-    height: 38px;
-    padding: 0 0.65rem;
-    font-size: 0.8rem;
-    gap: 0.35rem;
-  }
-
   .user-att-pill {
     display: none !important;
+  }
+}
+
+/* Medium Laptops & Standard 1366px Screens (Max-Width: 1380px) */
+@media (max-width: 1380px) {
+  .pos-header {
+    padding: 0 0.75rem;
+    gap: 0.45rem;
+  }
+
+  .live-clock {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .btn-header-action {
+    height: 38px;
+    padding: 0 0.55rem;
+    font-size: 0.8rem;
+    gap: 0.35rem;
   }
 
   .btn-logout {
@@ -4899,11 +4912,11 @@ img {
   }
 }
 
-/* Medium Laptops & Compact Desktops (Max-Width: 1220px) */
-@media (max-width: 1220px) {
+/* Compact Laptops & Narrow Displays (Max-Width: 1260px) */
+@media (max-width: 1260px) {
   .pos-header {
-    padding: 0 0.75rem;
-    gap: 0.45rem;
+    padding: 0 0.7rem;
+    gap: 0.4rem;
   }
 
   .btn-header-action .action-label {
