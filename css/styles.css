@@ -6425,7 +6425,8 @@ img {
   background: linear-gradient(90deg, #38bdf8 0%, #6366f1 50%, #c084fc 100%);
   border-radius: var(--radius-full);
   box-shadow: 0 0 14px #38bdf8;
-  transition: width 0.12s ease-out;
+  transition: width 0.04s ease-out;
+  will-change: width;
 }
 
 .modern-progress-shimmer {

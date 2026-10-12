@@ -247,30 +247,41 @@
       _isSubmitting: false,
 
       async init() {
-        LaundrySplash.init({ autoPlay: true, durationMs: 4000 });
-
-        const data = StorageManager.get();
         const storeNameEl = document.getElementById("login-store-name");
         const storeTaglineEl = document.getElementById("login-store-tagline");
 
-        if (storeNameEl && data.settings?.storeName) {
-          storeNameEl.textContent = data.settings.storeName;
+        // Immediately apply cached store branding
+        const cachedData = StorageManager.get();
+        if (storeNameEl && cachedData.settings?.storeName) {
+          storeNameEl.textContent = cachedData.settings.storeName;
         }
-        if (storeTaglineEl && data.settings?.tagline) {
-          storeTaglineEl.textContent = data.settings.tagline;
+        if (storeTaglineEl && cachedData.settings?.tagline) {
+          storeTaglineEl.textContent = cachedData.settings.tagline;
         }
 
-        // Fetch latest data from database server
-        try {
-          await StorageManager.fetchFromServer(true);
-          const freshData = StorageManager.get();
-          if (storeNameEl && freshData.settings?.storeName) {
-            storeNameEl.textContent = freshData.settings.storeName;
+        // Real asynchronous data synchronization promise from database server
+        const syncPromise = (async () => {
+          try {
+            await StorageManager.fetchFromServer(true);
+            const freshData = StorageManager.get();
+            if (storeNameEl && freshData.settings?.storeName) {
+              storeNameEl.textContent = freshData.settings.storeName;
+            }
+            if (storeTaglineEl && freshData.settings?.tagline) {
+              storeTaglineEl.textContent = freshData.settings.tagline;
+            }
+          } catch(e) {
+            console.warn("Server sync notice:", e);
           }
-          if (storeTaglineEl && freshData.settings?.tagline) {
-            storeTaglineEl.textContent = freshData.settings.tagline;
-          }
-        } catch(e) {}
+        })();
+
+        // Start splash screen dynamically bound to actual site & database loading
+        LaundrySplash.init({
+          trackActualLoad: true,
+          syncPromise: syncPromise,
+          minDurationMs: 750,
+          maxDurationMs: 4500
+        });
 
         // Check if redirected due to forced timeout / logout
         const logoutReason = sessionStorage.getItem("LOGOUT_REASON");

@@ -2,20 +2,40 @@
  * Cool Laundry Opening Screen (Splash Animation Module)
  * Ultra-Modern Futuristic Appliance UI with 3D-effect Washing Machine Drum,
  * Liquid Vortex, Tumbling Clothes, Soap Suds, and Real-time Telemetry HUD.
+ *
+ * Dynamic Real-Loading Engine:
+ * - Adapts dynamically to actual page & asset loading speed.
+ * - Tracks DOM parsing, web font loading, media assets, and backend server sync.
+ * - Natural fluid physics via requestAnimationFrame with spring/lerp easing.
+ * - Fast-load acceleration (snappy ~700-850ms cycle) so fast connections never feel delayed.
+ * - Gentle hover-spin when awaiting slower network or cold API server queries.
+ * - Non-blocking safety fallback and instant skip button.
  */
 
 const LaundrySplash = {
   _isDismissed: false,
   _progress: 0,
-  _intervalId: null,
+  _targetProgress: 0,
+  _rafId: null,
+  _safetyTimeoutId: null,
+  _isRealLoadingDone: false,
+  _currentStage: 0,
 
   init(options = {}) {
+    const trackActualLoad = options.trackActualLoad !== false;
     const autoPlay = options.autoPlay !== false;
-    const durationMs = options.durationMs || 3500;
+    const minDurationMs = options.minDurationMs || 750;
+    const maxDurationMs = options.maxDurationMs || 4500;
+    const fallbackDurationMs = options.durationMs || 1800;
     const onComplete = options.onComplete || null;
+    const syncPromise = options.syncPromise || null;
 
+    this.stop();
     this._isDismissed = false;
     this._progress = 0;
+    this._targetProgress = trackActualLoad ? 20 : 0;
+    this._isRealLoadingDone = false;
+    this._currentStage = 0;
 
     let splashEl = document.getElementById("laundry-splash-screen");
     if (!splashEl) {
@@ -29,18 +49,31 @@ const LaundrySplash = {
     if (window.lucide) lucide.createIcons();
 
     this.generateBubbles();
-
-    // Sync Store Name if configured
-    if (typeof StorageManager !== "undefined") {
-      const data = StorageManager.get();
-      const titleEl = document.getElementById("splash-store-title");
-      if (titleEl && data?.settings?.storeName) {
-        titleEl.textContent = data.settings.storeName;
-      }
-    }
+    this.syncStoreName();
 
     if (autoPlay) {
-      this.startCycle(durationMs, onComplete);
+      if (trackActualLoad) {
+        this.trackActualLoad({
+          minDurationMs,
+          maxDurationMs,
+          syncPromise,
+          onComplete
+        });
+      } else {
+        this.startCycle(fallbackDurationMs, onComplete);
+      }
+    }
+  },
+
+  syncStoreName() {
+    if (typeof StorageManager !== "undefined") {
+      try {
+        const data = StorageManager.get();
+        const titleEl = document.getElementById("splash-store-title");
+        if (titleEl && data?.settings?.storeName) {
+          titleEl.textContent = data.settings.storeName;
+        }
+      } catch (e) {}
     }
   },
 
@@ -221,10 +254,10 @@ const LaundrySplash = {
       const bubble = document.createElement("div");
       bubble.className = "soap-bubble";
 
-      const size = Math.floor(Math.random() * 34) + 16; // 16px to 50px
-      const left = Math.floor(Math.random() * 96) + 2; // 2% to 98%
-      const duration = (Math.random() * 4.5 + 4).toFixed(1); // 4.0s to 8.5s
-      const delay = (Math.random() * 4).toFixed(1); // 0s to 4s stagger
+      const size = Math.floor(Math.random() * 34) + 16;
+      const left = Math.floor(Math.random() * 96) + 2;
+      const duration = (Math.random() * 4.5 + 4).toFixed(1);
+      const delay = (Math.random() * 4).toFixed(1);
 
       bubble.style.width = `${size}px`;
       bubble.style.height = `${size}px`;
@@ -236,9 +269,149 @@ const LaundrySplash = {
     }
   },
 
-  startCycle(totalMs, onComplete) {
-    this._isDismissed = false;
-    this._progress = 0;
+  /**
+   * Tracks real page, asset, and network data loading.
+   * If the site loads very fast, the loading animation completes quickly (~700ms - 850ms)
+   * in a smooth, natural flow without artificial delays.
+   * If loading takes time, it smoothly holds in the spin cycle and completes as soon as ready.
+   */
+  trackActualLoad(config = {}) {
+    const minDurationMs = config.minDurationMs || 750;
+    const maxDurationMs = config.maxDurationMs || 4500;
+    const syncPromise = config.syncPromise || null;
+    const onComplete = config.onComplete || null;
+
+    const startTime = performance.now();
+    this._isRealLoadingDone = false;
+    this._targetProgress = 20;
+
+    // Track Milestone 1: DOM Ready
+    if (document.readyState === "interactive" || document.readyState === "complete") {
+      this._targetProgress = Math.max(this._targetProgress, 35);
+    } else {
+      document.addEventListener("DOMContentLoaded", () => {
+        this._targetProgress = Math.max(this._targetProgress, 35);
+      }, { once: true });
+    }
+
+    // Track Milestone 2: Typography & Web Fonts
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        this._targetProgress = Math.max(this._targetProgress, 55);
+      }).catch(() => {
+        this._targetProgress = Math.max(this._targetProgress, 50);
+      });
+    } else {
+      this._targetProgress = Math.max(this._targetProgress, 50);
+    }
+
+    // Track Milestone 3: Window & Subresources Load
+    if (document.readyState === "complete") {
+      this._targetProgress = Math.max(this._targetProgress, 70);
+    } else {
+      window.addEventListener("load", () => {
+        this._targetProgress = Math.max(this._targetProgress, 70);
+      }, { once: true });
+    }
+
+    // Track Milestone 4: Backend Data Synchronization
+    let syncTask = Promise.resolve();
+    if (syncPromise && typeof syncPromise.then === "function") {
+      syncTask = syncPromise;
+    } else if (typeof StorageManager !== "undefined" && StorageManager.fetchFromServer) {
+      // If StorageManager is actively fetching, hook into pos-data-synced or timeout
+      if (StorageManager._isSyncing) {
+        syncTask = new Promise((resolve) => {
+          const onSynced = () => {
+            window.removeEventListener("pos-data-synced", onSynced);
+            resolve();
+          };
+          window.addEventListener("pos-data-synced", onSynced, { once: true });
+          setTimeout(resolve, 2500); // safety resolve
+        });
+      }
+    }
+
+    syncTask.then(() => {
+      this.syncStoreName();
+      this.completeLoad();
+    }).catch(() => {
+      this.syncStoreName();
+      this.completeLoad();
+    });
+
+    // Safety fallback: Never keep splash screen open past maxDurationMs
+    if (this._safetyTimeoutId) clearTimeout(this._safetyTimeoutId);
+    this._safetyTimeoutId = setTimeout(() => {
+      this.completeLoad();
+    }, maxDurationMs);
+
+    // Run fluid requestAnimationFrame engine
+    this._runFluidLoop({ minDurationMs, startTime, onComplete });
+  },
+
+  /**
+   * Fluid Physics Animation Engine (requestAnimationFrame with Lerp Easing)
+   */
+  _runFluidLoop({ minDurationMs, startTime, onComplete }) {
+    if (this._rafId) cancelAnimationFrame(this._rafId);
+
+    const step = (now) => {
+      if (this._isDismissed) return;
+
+      const elapsed = now - startTime;
+
+      if (this._isRealLoadingDone) {
+        // Real loading finished!
+        if (elapsed < minDurationMs) {
+          // Accelerate naturally across the remaining minimum duration
+          const idealP = (elapsed / minDurationMs) * 100;
+          this._progress += (idealP - this._progress) * 0.22;
+        } else {
+          // Reached or surpassed min duration: smoothly surge to 100%
+          const remaining = 100 - this._progress;
+          const delta = Math.max(1.8, remaining * 0.28);
+          this._progress += delta;
+        }
+
+        if (this._progress >= 99.5) {
+          this._progress = 100;
+          this.renderProgress(100);
+          this._finishAndDismiss(onComplete);
+          return;
+        }
+      } else {
+        // Still loading real assets / waiting for server sync
+        // Cap target progress at 85% until actual server sync completes
+        const cappedTarget = Math.min(85, this._targetProgress);
+        // Subtle natural micro-drift while waiting so the bar never looks frozen
+        if (this._progress < cappedTarget) {
+          this._progress += (cappedTarget - this._progress) * 0.09;
+        } else if (this._progress < 85) {
+          this._progress += 0.035; // gentle natural breathing drift
+        }
+      }
+
+      this.renderProgress(this._progress);
+      this._rafId = requestAnimationFrame(step);
+    };
+
+    this._rafId = requestAnimationFrame(step);
+  },
+
+  /**
+   * Signal that real loading of the page & server data has completed.
+   */
+  completeLoad() {
+    this._isRealLoadingDone = true;
+    this._targetProgress = 100;
+  },
+
+  /**
+   * Updates UI elements based on progress percentage.
+   */
+  renderProgress(rawProgress) {
+    const p = Math.min(100, Math.max(0, Math.floor(rawProgress)));
 
     const fillEl = document.getElementById("splash-progress-fill");
     const percentEl = document.getElementById("splash-percent-label");
@@ -253,94 +426,117 @@ const LaundrySplash = {
     const stepSpin = document.getElementById("step-spin");
     const stepClean = document.getElementById("step-clean");
 
-    const intervalTime = 30; // ms
-    const increment = 100 / (totalMs / intervalTime);
+    if (fillEl) fillEl.style.width = `${p}%`;
+    if (percentEl) percentEl.textContent = `${p}%`;
 
-    if (this._intervalId) clearInterval(this._intervalId);
+    // Phase 1: Wash (0 - 25%)
+    if (p <= 25) {
+      if (stepWash) stepWash.className = "modern-step step-wash active";
+      if (stepRinse) stepRinse.className = "modern-step step-rinse";
+      if (stepSpin) stepSpin.className = "modern-step step-spin";
+      if (stepClean) stepClean.className = "modern-step step-clean";
 
-    this._intervalId = setInterval(() => {
-      if (this._isDismissed) {
-        clearInterval(this._intervalId);
-        return;
-      }
+      const rpm = Math.round(450 + (p / 25) * 200);
+      if (rpmValEl) rpmValEl.textContent = `${rpm}`;
+      if (tempValEl) tempValEl.textContent = "40°C";
+      if (statusSubEl) statusSubEl.textContent = "Dispensing premium detergent & agitating rich bubbles...";
+      if (phaseLabelEl) phaseLabelEl.textContent = "Washing fabrics & initializing core engine...";
+      if (tumblingClothes) tumblingClothes.classList.remove("spin-fast");
+    }
+    // Phase 2: Rinse (26 - 55%)
+    else if (p <= 55) {
+      if (stepWash) stepWash.className = "modern-step step-wash completed";
+      if (stepRinse) stepRinse.className = "modern-step step-rinse active";
+      if (stepSpin) stepSpin.className = "modern-step step-spin";
+      if (stepClean) stepClean.className = "modern-step step-clean";
 
-      this._progress = Math.min(100, this._progress + increment);
-      const p = Math.floor(this._progress);
+      if (rpmValEl) rpmValEl.textContent = "950";
+      if (tempValEl) tempValEl.textContent = "30°C";
+      if (statusSubEl) statusSubEl.textContent = "Rinsing fabrics with aromatic conditioner & fresh water...";
+      if (phaseLabelEl) phaseLabelEl.textContent = "Loading typography, assets & sound engine...";
+      if (tumblingClothes) tumblingClothes.classList.remove("spin-fast");
+    }
+    // Phase 3: Spin Extraction (56 - 88%)
+    else if (p <= 88) {
+      if (stepWash) stepWash.className = "modern-step step-wash completed";
+      if (stepRinse) stepRinse.className = "modern-step step-rinse completed";
+      if (stepSpin) stepSpin.className = "modern-step step-spin active";
+      if (stepClean) stepClean.className = "modern-step step-clean";
 
-      if (fillEl) fillEl.style.width = `${p}%`;
-      if (percentEl) percentEl.textContent = `${p}%`;
+      if (rpmValEl) rpmValEl.textContent = "1,400";
+      if (tempValEl) tempValEl.textContent = "COLD";
+      if (statusSubEl) statusSubEl.textContent = "Centrifugal spin extraction at 1,400 RPM...";
+      if (phaseLabelEl) phaseLabelEl.textContent = "Synchronizing database & verifying local cache...";
+      if (tumblingClothes) tumblingClothes.classList.add("spin-fast");
+    }
+    // Phase 4: Ready (89 - 100%)
+    else {
+      if (stepWash) stepWash.className = "modern-step step-wash completed";
+      if (stepRinse) stepRinse.className = "modern-step step-rinse completed";
+      if (stepSpin) stepSpin.className = "modern-step step-spin completed";
+      if (stepClean) stepClean.className = "modern-step step-clean active";
 
-      // Phase 1: Wash (0 - 25%)
-      if (p <= 25) {
-        if (stepWash) { stepWash.className = "modern-step step-wash active"; }
-        if (stepRinse) { stepRinse.className = "modern-step step-rinse"; }
-        if (stepSpin) { stepSpin.className = "modern-step step-spin"; }
-        if (stepClean) { stepClean.className = "modern-step step-clean"; }
-        if (rpmValEl) rpmValEl.textContent = "650";
-        if (tempValEl) tempValEl.textContent = "40°C";
-        if (statusSubEl) statusSubEl.textContent = "Dispensing premium detergent & agitating rich bubbles...";
-        if (phaseLabelEl) phaseLabelEl.textContent = "Washing fabrics with soft enzyme lather...";
-        if (tumblingClothes) tumblingClothes.classList.remove("spin-fast");
-      }
-      // Phase 2: Rinse (26 - 55%)
-      else if (p <= 55) {
-        if (stepWash) { stepWash.className = "modern-step step-wash completed"; }
-        if (stepRinse) { stepRinse.className = "modern-step step-rinse active"; }
-        if (stepSpin) { stepSpin.className = "modern-step step-spin"; }
-        if (stepClean) { stepClean.className = "modern-step step-clean"; }
-        if (rpmValEl) rpmValEl.textContent = "950";
-        if (tempValEl) tempValEl.textContent = "30°C";
-        if (statusSubEl) statusSubEl.textContent = "Rinsing fabrics with aromatic conditioner & fresh water...";
-        if (phaseLabelEl) phaseLabelEl.textContent = "Cleansing fibers & neutralizing wash residue...";
-        if (tumblingClothes) tumblingClothes.classList.remove("spin-fast");
-      }
-      // Phase 3: Spin Extraction (56 - 88%)
-      else if (p <= 88) {
-        if (stepWash) { stepWash.className = "modern-step step-wash completed"; }
-        if (stepRinse) { stepRinse.className = "modern-step step-rinse completed"; }
-        if (stepSpin) { stepSpin.className = "modern-step step-spin active"; }
-        if (stepClean) { stepClean.className = "modern-step step-clean"; }
-        if (rpmValEl) rpmValEl.textContent = "1,400";
-        if (tempValEl) tempValEl.textContent = "COLD";
-        if (statusSubEl) statusSubEl.textContent = "High-speed centrifugal spin extraction at 1,400 RPM...";
-        if (phaseLabelEl) phaseLabelEl.textContent = "Turbo air-drying & moisture elimination...";
-        if (tumblingClothes) tumblingClothes.classList.add("spin-fast");
-      }
-      // Phase 4: Ready (89 - 100%)
-      else {
-        if (stepWash) { stepWash.className = "modern-step step-wash completed"; }
-        if (stepRinse) { stepRinse.className = "modern-step step-rinse completed"; }
-        if (stepSpin) { stepSpin.className = "modern-step step-spin completed"; }
-        if (stepClean) { stepClean.className = "modern-step step-clean active"; }
-        if (rpmValEl) rpmValEl.textContent = "0";
-        if (tempValEl) tempValEl.textContent = "READY";
-        if (statusSubEl) statusSubEl.textContent = "Fresh, sanitized & sparkling clean. Welcome!";
-        if (phaseLabelEl) phaseLabelEl.textContent = "Launching POS Management Terminal...";
-        if (tumblingClothes) tumblingClothes.classList.remove("spin-fast");
-      }
+      if (rpmValEl) rpmValEl.textContent = "0";
+      if (tempValEl) tempValEl.textContent = "READY";
+      if (statusSubEl) statusSubEl.textContent = "Fresh, sanitized & sparkling clean. Welcome!";
+      if (phaseLabelEl) phaseLabelEl.textContent = "Launching POS Management Terminal...";
+      if (tumblingClothes) tumblingClothes.classList.remove("spin-fast");
+    }
+  },
 
-      if (this._progress >= 100) {
-        clearInterval(this._intervalId);
-        setTimeout(() => {
-          this.dismiss(onComplete);
-        }, 360);
-      }
-    }, intervalTime);
+  _finishAndDismiss(onComplete) {
+    if (this._isDismissed) return;
+    setTimeout(() => {
+      this.dismiss(onComplete);
+    }, 280);
+  },
+
+  /**
+   * Timed simulated cycle (for demo replays or explicit timed duration).
+   */
+  startCycle(totalMs = 1800, onComplete = null) {
+    this.stop();
+    this._isDismissed = false;
+    this._progress = 0;
+    this._targetProgress = 100;
+    this._isRealLoadingDone = true;
+
+    const startTime = performance.now();
+    this._runFluidLoop({
+      minDurationMs: totalMs,
+      startTime,
+      onComplete
+    });
+  },
+
+  stop() {
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+    if (this._safetyTimeoutId) {
+      clearTimeout(this._safetyTimeoutId);
+      this._safetyTimeoutId = null;
+    }
   },
 
   dismiss(onComplete) {
     if (this._isDismissed) return;
     this._isDismissed = true;
 
-    if (this._intervalId) {
-      clearInterval(this._intervalId);
-      this._intervalId = null;
-    }
+    this.stop();
 
     const splashEl = document.getElementById("laundry-splash-screen");
     if (splashEl) {
-      if (typeof Sound !== "undefined" && Sound.playBeep) {
-        try { Sound.playBeep(); } catch (e) { }
+      // Audio chime on successful completion
+      if (typeof Sound !== "undefined") {
+        try {
+          if (typeof Sound.playSuccess === "function") {
+            Sound.playSuccess();
+          } else if (typeof Sound.playBeep === "function") {
+            Sound.playBeep(800, 0.1);
+          }
+        } catch (e) {}
       }
 
       splashEl.classList.add("fade-out");
@@ -351,32 +547,32 @@ const LaundrySplash = {
         if (typeof onComplete === "function") {
           onComplete();
         }
-      }, 700);
+      }, 650);
     }
   }
 };
 
-// Global Helper to trigger or test the laundry opening screen anytime
-function playLaundryIntro(duration = 3500) {
+/**
+ * Global helper to trigger or replay the opening screen animation anytime.
+ */
+function playLaundryIntro(duration = 1800) {
   let splashEl = document.getElementById("laundry-splash-screen");
   if (!splashEl) {
-    LaundrySplash.init({ autoPlay: true, durationMs: duration });
+    LaundrySplash.init({ trackActualLoad: false, durationMs: duration, autoPlay: true });
   } else {
-    if (LaundrySplash._intervalId) {
-      clearInterval(LaundrySplash._intervalId);
-      LaundrySplash._intervalId = null;
-    }
+    LaundrySplash.stop();
     splashEl.style.display = "flex";
     splashEl.classList.remove("fade-out");
     LaundrySplash._isDismissed = false;
     LaundrySplash._progress = 0;
 
-    const barEl = document.getElementById("splash-progress-bar");
-    if (barEl) barEl.style.width = "0%";
+    const fillEl = document.getElementById("splash-progress-fill");
+    if (fillEl) fillEl.style.width = "0%";
     const pctEl = document.getElementById("splash-percent-label");
     if (pctEl) pctEl.textContent = "0%";
 
     LaundrySplash.generateBubbles();
+    LaundrySplash.syncStoreName();
     LaundrySplash.startCycle(duration);
   }
 }
