@@ -19,7 +19,12 @@
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="css/styles.css?v=3.5">
+  <!-- Login Portal strictly remains in Dark Mode -->
+  <script>
+    document.documentElement.setAttribute("data-theme", "dark");
+  </script>
+
+  <link rel="stylesheet" href="css/styles.css?v=3.6">
 </head>
 
 <body class="login-page-body">
@@ -380,10 +385,11 @@
       },
 
       onLoginSuccess(user, sessionId) {
-        // Apply user account's saved theme from database
+        // Save user account's theme for the POS / Admin portals
         const accountTheme = user.theme || "dark";
         localStorage.setItem("POS_THEME", accountTheme);
-        document.documentElement.setAttribute("data-theme", accountTheme);
+        // Login screen and any popups strictly remain in Dark Mode
+        document.documentElement.setAttribute("data-theme", "dark");
 
         sessionStorage.setItem("POS_ACTIVE_USER", JSON.stringify(user));
         localStorage.setItem("POS_ACTIVE_USER", JSON.stringify(user));
