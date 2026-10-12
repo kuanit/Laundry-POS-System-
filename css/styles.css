@@ -1049,6 +1049,8 @@ img {
   padding: 0.75rem 1.25rem;
   transition: all 0.2s ease;
   white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .btn:active {
@@ -2497,9 +2499,49 @@ img {
 }
 
 .sidebar-footer {
-  padding: 0.65rem 0.75rem;
+  padding: 0.75rem;
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-surface);
+}
+
+.sidebar-footer .btn {
+  width: 100%;
+  text-decoration: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.sidebar-footer .btn-launch-pos {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.sidebar-footer .btn-launch-pos:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+[data-theme="light"] .sidebar-footer .btn-launch-pos {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+
+[data-theme="light"] .sidebar-footer .btn-launch-pos:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 /* ADMIN MAIN */
@@ -4958,7 +5000,7 @@ img {
     gap: 0.35rem;
   }
 
-  .btn-logout {
+  .pos-header .btn-logout {
     height: 38px;
     min-height: 38px;
     padding: 0 0.65rem;
@@ -4999,11 +5041,11 @@ img {
     display: none;
   }
 
-  .btn-logout .logout-label {
+  .pos-header .btn-logout .logout-label {
     display: none;
   }
 
-  .btn-logout {
+  .pos-header .btn-logout {
     width: 38px;
     height: 38px;
     min-width: 38px;
@@ -5058,7 +5100,7 @@ img {
     font-size: 0.75rem;
   }
 
-  .btn-logout {
+  .pos-header .btn-logout {
     width: 38px;
     height: 38px;
     min-width: 38px;
@@ -5097,11 +5139,11 @@ img {
     border-color: transparent;
   }
 
-  .btn-logout .logout-label {
+  .pos-header .btn-logout .logout-label {
     display: none;
   }
 
-  .btn-logout {
+  .pos-header .btn-logout {
     width: 36px;
     height: 36px;
     padding: 0;

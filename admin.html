@@ -33,7 +33,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=3.6">
+  <link rel="stylesheet" href="css/styles.css?v=3.9">
 </head>
 
 <body class="admin-body">
@@ -101,12 +101,15 @@
       </nav>
 
       <div class="sidebar-footer">
-        <a href="pos.html" class="btn btn-secondary btn-block mb-2" target="_blank"
-          title="Open Cashier Site in New Tab">
-          <i data-lucide="external-link"></i> Launch Cashier POS
+        <a href="pos.html" class="btn btn-secondary btn-block btn-launch-pos" target="_blank"
+          title="Open Cashier POS Terminal in New Tab">
+          <i data-lucide="external-link"></i>
+          <span>Launch Cashier POS</span>
         </a>
-        <button class="btn btn-danger btn-block btn-logout" onclick="AdminSite.confirmLogout()">
-          <i data-lucide="log-out"></i> Logout
+        <button type="button" class="btn btn-danger btn-block btn-admin-logout" onclick="AdminSite.confirmLogout()"
+          title="Logout from Admin Portal">
+          <i data-lucide="log-out"></i>
+          <span>Logout</span>
         </button>
       </div>
     </aside>
