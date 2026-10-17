@@ -791,10 +791,10 @@ const CashierPOS = {
   generateReceiptHTML(sale) {
     const data = StorageManager.get();
     const settings = data.settings || {};
-    const dateFormatted = new Date(sale.createdAt).toLocaleDateString('en-US', {
+    const dateFormatted = new Date(sale.createdAt).toLocaleString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
     });
-    const dueFormatted = sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('en-US', {
+    const dueFormatted = sale.dueDate ? new Date(sale.dueDate).toLocaleString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
     }) : "48 Hours";
 
@@ -904,7 +904,9 @@ const CashierPOS = {
     const printArea = document.getElementById("thermal-print-area");
     if (printArea) {
       printArea.innerHTML = this.generateReceiptHTML(sale);
-      window.print();
+      setTimeout(() => {
+        window.print();
+      }, 50);
     }
   },
 

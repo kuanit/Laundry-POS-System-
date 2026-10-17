@@ -4184,64 +4184,139 @@ img {
 
 
 /* =========================================================
-   THERMAL RECEIPT PRINT STYLES
+   THERMAL RECEIPT PRINT STYLES (80mm / 72mm & 58mm Printers)
+   Optimized for POS-80 thermal printers in Google Chrome / Edge
    ========================================================= */
 .thermal-print-area {
   display: none;
 }
 
+@page {
+  /* Targets 80mm receipt rolls with zero margins */
+  size: 80mm 297mm;
+  margin: 0mm;
+}
+
 @media print {
-  body * {
-    visibility: hidden;
+  /* Document level overrides: prevent dark theme, scrollbars, or viewport clipping */
+  *, *::before, *::after {
+    box-sizing: border-box !important;
   }
-  
-  .thermal-print-area, .thermal-print-area * {
-    visibility: visible;
+
+  html, body {
+    width: 80mm !important;
+    min-width: 80mm !important;
+    max-width: 80mm !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  
+
+  /* Completely remove all screen UI elements from print rendering */
+  body > *:not(#thermal-print-area):not(.thermal-print-area) {
+    display: none !important;
+  }
+
+  .pos-header,
+  .pos-layout,
+  .admin-layout,
+  .admin-header,
+  .admin-sidebar,
+  .modal-backdrop,
+  .modal-dialog,
+  .laundry-splash-screen,
+  .toast-container,
+  #app {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Thermal print container: exact 72mm printable width for 80mm thermal roll */
+  #thermal-print-area,
   .thermal-print-area {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    margin: 0;
-    padding: 2mm;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 11pt;
-    color: #000000;
-    background: #ffffff;
-    line-height: 1.3;
+    visibility: visible !important;
+    position: static !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    min-width: 72mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 0 8mm 0 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 10pt !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    line-height: 1.25 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Force all receipt text, borders, tables, and icons to pure high-contrast black */
+  #thermal-print-area *,
+  .thermal-print-area * {
+    visibility: visible !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    box-sizing: border-box !important;
+    font-family: 'Courier New', Courier, monospace !important;
+  }
+
+  #thermal-print-area div,
+  #thermal-print-area span,
+  #thermal-print-area p,
+  #thermal-print-area table,
+  #thermal-print-area tbody,
+  #thermal-print-area tr,
+  #thermal-print-area td,
+  #thermal-print-area th {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  /* Keep claim stub and receipt blocks intact without unwanted page breaks */
+  #thermal-print-area > div,
+  .receipt-paper-wrapper,
+  .claim-stub-wrapper {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .print-receipt-header {
     text-align: center;
     border-bottom: 1px dashed #000000;
-    padding-bottom: 4mm;
+    padding-bottom: 3mm;
     margin-bottom: 3mm;
   }
 
   .print-store-name {
-    font-size: 14pt;
+    font-size: 13pt;
     font-weight: bold;
     margin-bottom: 1mm;
   }
 
   .print-receipt-meta {
-    font-size: 9pt;
+    font-size: 8.5pt;
     margin-bottom: 2mm;
   }
 
   .print-items-table {
     width: 100%;
-    font-size: 9.5pt;
+    font-size: 9pt;
     border-collapse: collapse;
     margin-bottom: 3mm;
   }
 
   .print-items-table th {
     text-align: left;
-    border-bottom: 1px dashed #000;
+    border-bottom: 1px dashed #000000;
     padding-bottom: 1mm;
   }
 
@@ -4250,10 +4325,10 @@ img {
   }
 
   .print-totals {
-    border-top: 1px dashed #000;
+    border-top: 1px dashed #000000;
     padding-top: 2mm;
     margin-top: 2mm;
-    font-size: 10pt;
+    font-size: 9.5pt;
   }
 
   .print-totals-row {
@@ -4264,18 +4339,18 @@ img {
 
   .print-grand-total {
     font-weight: bold;
-    font-size: 12pt;
-    border-top: 1px solid #000;
-    border-bottom: 1px solid #000;
+    font-size: 11pt;
+    border-top: 1px solid #000000;
+    border-bottom: 1px solid #000000;
     padding: 1.5mm 0;
     margin: 2mm 0;
   }
 
   .print-footer-note {
     text-align: center;
-    font-size: 8.5pt;
+    font-size: 8pt;
     margin-top: 4mm;
-    border-top: 1px dashed #000;
+    border-top: 1px dashed #000000;
     padding-top: 2mm;
   }
 }
