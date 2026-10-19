@@ -467,13 +467,16 @@ img {
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0;
-  padding: 1.5rem 1rem;
+  padding: 1.5rem 1rem max(3.5rem, calc(env(safe-area-inset-bottom, 0px) + 2rem));
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
   background-color: #070c1a;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
@@ -1561,11 +1564,14 @@ img {
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 0.4rem;
   margin-bottom: 0.55rem;
   flex-shrink: 0;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-x pan-y;
   scrollbar-width: thin;
 }
 
@@ -1584,6 +1590,7 @@ img {
   transition: all 0.2s ease;
   min-height: 40px;
   flex-shrink: 0;
+  touch-action: pan-x pan-y;
 }
 .category-tab-btn:hover {
   background: var(--bg-surface-elevated);
@@ -1607,8 +1614,9 @@ img {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   padding-right: 0.25rem;
+  touch-action: pan-y;
 }
 
 .product-grid {
@@ -1616,6 +1624,7 @@ img {
   grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
   gap: 0.65rem;
   padding-bottom: 1.25rem;
+  touch-action: pan-y;
 }
 
 @media (min-width: 1600px) {
@@ -1831,6 +1840,31 @@ img {
   transform: translateY(-6px) scale(1.02) !important;
   box-shadow: 0 12px 28px rgba(2, 132, 199, 0.35) !important;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ADMIN SERVICES & PRODUCTS CATALOG SCROLL BEHAVIOR - Unlocks tablet touch swiping */
+.admin-content-body .product-grid-container,
+#admin-product-grid-view {
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overscroll-behavior: auto !important;
+  overscroll-behavior-y: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: auto !important;
+  flex: none !important;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: auto !important;
+}
+
+.admin-content-body .product-grid,
+#admin-product-grid {
+  overflow: visible !important;
+  touch-action: pan-y !important;
+}
+
+.admin-product-card {
+  touch-action: pan-y !important;
 }
 
 /* Floating drag ghost that follows cursor / finger */
@@ -2114,11 +2148,12 @@ img {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   padding: 0.5rem 0.65rem;
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  touch-action: pan-y;
 }
 
 .cart-empty-placeholder {
@@ -2450,7 +2485,8 @@ img {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
 }
 
 .nav-item {
@@ -2593,13 +2629,15 @@ img {
   min-width: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding: 1rem;
+  overscroll-behavior-y: auto;
+  padding: 1rem 1rem max(5.5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem)) 1rem;
+  touch-action: pan-y;
 }
 
 .tab-pane {
   display: none;
   animation: fadeIn 0.2s ease;
+  touch-action: pan-y;
 }
 .tab-pane.active {
   display: block;
@@ -2744,9 +2782,20 @@ img {
 /* DATA TABLES */
 .table-responsive {
   overflow-x: auto;
+  overflow-y: visible;
   width: 100%;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-x pan-y;
+}
+
+.table-responsive table,
+.table-responsive tbody,
+.table-responsive tr,
+.table-responsive td,
+.table-responsive th {
+  touch-action: pan-x pan-y;
 }
 
 .data-table {
@@ -3412,16 +3461,18 @@ img {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: 0.75rem;
+  padding: max(1.25rem, env(safe-area-inset-top, 1.25rem)) 0.75rem max(3.5rem, calc(env(safe-area-inset-bottom, 0px) + 2.5rem));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
+  box-sizing: border-box;
 }
 
 .modal-backdrop.active {
@@ -3436,14 +3487,15 @@ img {
   box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: 540px;
-  max-height: calc(100vh - 2rem);
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100vh - 2.5rem);
+  max-height: calc(100dvh - 2.5rem);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transform: scale(0.95) translateY(10px);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   margin: auto;
+  touch-action: pan-y;
 }
 
 .modal-dialog.modal-sm {
@@ -3550,7 +3602,8 @@ img {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
 }
 
 .modal-footer {
@@ -3791,6 +3844,8 @@ img {
   overflow-y: auto;
   max-height: min(60vh, 480px);
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
 }
 .receipt-paper-container::-webkit-scrollbar {
   width: 6px;
@@ -4736,10 +4791,11 @@ img {
   gap: 10px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   flex: 1;
   min-height: 0;
   padding-right: 4px;
+  touch-action: pan-y;
 }
 
 @media (min-width: 768px) {
@@ -5093,7 +5149,8 @@ img {
   }
 
   .admin-content-body {
-    padding: 0.85rem;
+    padding: 0.85rem 0.85rem max(5.5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem)) 0.85rem;
+    touch-action: pan-y;
   }
 
   .metrics-grid {
@@ -5478,9 +5535,11 @@ img {
     border-bottom: 1px solid var(--border-color);
   }
 
-  .product-grid-container {
+  .products-section .product-grid-container {
     max-height: 55vh;
     overflow-y: auto;
+    overscroll-behavior-y: auto;
+    touch-action: pan-y;
   }
 
   .cart-section {
@@ -5492,6 +5551,8 @@ img {
   .cart-items-container {
     max-height: 35vh;
     overflow-y: auto;
+    overscroll-behavior-y: auto;
+    touch-action: pan-y;
   }
 }
 
@@ -6349,9 +6410,15 @@ img {
   z-index: 999999;
   background: radial-gradient(circle at 50% 35%, #0c1427 0%, #060913 65%, #020408 100%);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
+  padding: 1.5rem 1rem max(3.5rem, calc(env(safe-area-inset-bottom, 0px) + 2rem));
+  box-sizing: border-box;
   transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1), filter 0.75s ease;
 }
 
@@ -6433,6 +6500,7 @@ img {
   z-index: 10;
   width: 94%;
   max-width: 520px;
+  margin: auto 0;
   background: rgba(13, 22, 44, 0.68);
   backdrop-filter: blur(36px);
   -webkit-backdrop-filter: blur(36px);

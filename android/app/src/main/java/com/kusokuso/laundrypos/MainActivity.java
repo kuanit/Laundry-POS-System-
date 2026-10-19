@@ -102,6 +102,11 @@ public class MainActivity extends AppCompatActivity {
         // Hardware acceleration & caching
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
+        // Prevent native overscroll glow interference with DOM scroll containers
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setVerticalScrollBarEnabled(false);
+        webView.setHorizontalScrollBarEnabled(false);
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {

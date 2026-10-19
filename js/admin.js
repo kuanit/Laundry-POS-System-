@@ -713,6 +713,7 @@ const AdminPanel = {
      Follows cursor on desktop and finger on tablet/touch
      ========================================================= */
   _pressTimer: null,
+  _holdingTimer: null,
   _startPos: null,
   _pointerId: null,
   _dragProdId: null,
@@ -720,9 +721,10 @@ const AdminPanel = {
   _isDragging: false,
   _ghostEl: null,
   _suppressCardClick: false,
+  _activeDragMoveHandler: null,
 
   handleCardPointerDown(e, prodId) {
-    if (e.target.closest("button") || e.target.closest("a") || e.target.closest("input")) return;
+    if (e.target.closest("button") || e.target.closest("a") || e.target.closest("input") || e.target.closest("select")) return;
     if (e.button !== undefined && e.button !== 0) return;
 
     this.cancelLongPress();
@@ -733,22 +735,27 @@ const AdminPanel = {
     this._dropTargetId = null;
 
     const card = document.getElementById(`prod-card-${prodId}`);
-    if (card) {
-      card.classList.add("card-press-holding");
+
+    // Mouse can show press feedback faster; touch waits 180ms so scrolling doesn't flash the card
+    if (e.pointerType !== "touch") {
+      if (card) card.classList.add("card-press-holding");
+    } else {
+      this._holdingTimer = setTimeout(() => {
+        if (!this._isDragging && card) {
+          card.classList.add("card-press-holding");
+        }
+      }, 180);
     }
 
-    const onPointerMove = (moveEvt) => {
+    const onPointerMovePassive = (moveEvt) => {
       if (moveEvt.pointerId !== this._pointerId) return;
       if (!this._isDragging) {
         const dist = Math.hypot(moveEvt.clientX - this._startPos.x, moveEvt.clientY - this._startPos.y);
-        if (dist > 8) {
+        // Any slight drag gesture is declared a scroll: cancel long press immediately
+        if (dist > 6) {
           this.cancelLongPress();
           cleanup();
         }
-      } else {
-        moveEvt.preventDefault();
-        this.updateDragGhost(moveEvt.clientX, moveEvt.clientY);
-        this.updateDropTarget(moveEvt.clientX, moveEvt.clientY);
       }
     };
 
@@ -764,12 +771,21 @@ const AdminPanel = {
     };
 
     const cleanup = () => {
-      window.removeEventListener("pointermove", onPointerMove);
+      if (this._holdingTimer) {
+        clearTimeout(this._holdingTimer);
+        this._holdingTimer = null;
+      }
+      window.removeEventListener("pointermove", onPointerMovePassive);
+      if (this._activeDragMoveHandler) {
+        window.removeEventListener("pointermove", this._activeDragMoveHandler);
+        this._activeDragMoveHandler = null;
+      }
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
     };
 
-    window.addEventListener("pointermove", onPointerMove, { passive: false });
+    // Passive listener ensures touch scrolling is never delayed or blocked
+    window.addEventListener("pointermove", onPointerMovePassive, { passive: true });
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerUp);
 
@@ -778,6 +794,16 @@ const AdminPanel = {
       this._pressTimer = null;
       if (card) card.classList.remove("card-press-holding");
       this.startDragging(e.clientX, e.clientY, prodId, card);
+
+      // Now that drag is confirmed, switch to non-passive pointermove to follow finger
+      window.removeEventListener("pointermove", onPointerMovePassive);
+      this._activeDragMoveHandler = (moveEvt) => {
+        if (moveEvt.pointerId !== this._pointerId) return;
+        if (moveEvt.cancelable) moveEvt.preventDefault();
+        this.updateDragGhost(moveEvt.clientX, moveEvt.clientY);
+        this.updateDropTarget(moveEvt.clientX, moveEvt.clientY);
+      };
+      window.addEventListener("pointermove", this._activeDragMoveHandler, { passive: false });
     }, 500);
   },
 
@@ -857,6 +883,10 @@ const AdminPanel = {
     if (this._pressTimer) {
       clearTimeout(this._pressTimer);
       this._pressTimer = null;
+    }
+    if (this._holdingTimer) {
+      clearTimeout(this._holdingTimer);
+      this._holdingTimer = null;
     }
     document.querySelectorAll(".admin-product-card.card-press-holding").forEach(c => c.classList.remove("card-press-holding"));
   },
