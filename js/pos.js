@@ -780,7 +780,10 @@ const CashierPOS = {
       printArea.innerHTML = receiptHtml;
     }
 
-    if (modal) modal.classList.add("active");
+    if (modal) {
+      modal.classList.add("active");
+      if (window.lucide) lucide.createIcons();
+    }
   },
 
   closeReceiptModal() {

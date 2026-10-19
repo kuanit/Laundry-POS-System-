@@ -1328,6 +1328,7 @@
   <div id="modal-sale-success" class="modal-backdrop">
     <div class="modal-dialog modal-receipt-dialog">
       <div class="success-banner" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">
+        <button type="button" class="modal-banner-close" onclick="CashierPOS.closeReceiptModal()" title="Close receipt">&times;</button>
         <div class="success-icon-circle">
           <i data-lucide="receipt"></i>
         </div>
@@ -1335,7 +1336,10 @@
         <p class="success-txn-text">Receipt <span id="success-modal-txnid">#TXN-2026-121</span></p>
       </div>
 
-      <div class="receipt-paper-wrapper" id="receipt-preview-content"></div>
+      <!-- Live Receipt Card Container -->
+      <div class="receipt-paper-container">
+        <div class="receipt-paper-wrapper" id="receipt-preview-content"></div>
+      </div>
 
       <div class="modal-footer receipt-actions-footer">
         <button type="button" class="btn btn-primary" onclick="CashierPOS.printEscPosUsb()" title="Direct ESC/POS command to Vozy G80 via USB (Instant print & cut)">
@@ -1344,11 +1348,11 @@
         <button type="button" class="btn btn-secondary" onclick="CashierPOS.printCurrentReceipt()" title="Print via Windows Driver / Browser Print Preview">
           <i data-lucide="printer"></i> Browser Print
         </button>
-        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadEscPosBin()" title="Download raw ESC/POS binary file">
-          <i data-lucide="file-code"></i> Raw ESC/POS
+        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadReceiptText()" title="Download plain text receipt">
+          <i data-lucide="download"></i> Download Text
         </button>
-        <button type="button" class="btn btn-secondary" onclick="CashierPOS.closeReceiptModal()">
-          Close
+        <button type="button" class="btn btn-secondary" onclick="CashierPOS.closeReceiptModal()" title="Close receipt dialog">
+          <i data-lucide="x"></i> Close
         </button>
       </div>
     </div>

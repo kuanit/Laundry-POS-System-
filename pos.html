@@ -382,6 +382,7 @@
   <div id="modal-sale-success" class="modal-backdrop">
     <div class="modal-dialog modal-receipt-dialog">
       <div class="success-banner">
+        <button type="button" class="modal-banner-close" onclick="CashierPOS.closeReceiptModal()" title="Close receipt">&times;</button>
         <div class="success-icon-circle">
           <i data-lucide="check"></i>
         </div>
@@ -389,9 +390,11 @@
         <p class="success-txn-text">Receipt <span id="success-modal-txnid">#TXN-2026-125</span></p>
       </div>
 
-      <!-- Live Receipt Card -->
-      <div class="receipt-paper-wrapper" id="receipt-preview-content">
-        <!-- Rendered dynamically -->
+      <!-- Live Receipt Card Container -->
+      <div class="receipt-paper-container">
+        <div class="receipt-paper-wrapper" id="receipt-preview-content">
+          <!-- Rendered dynamically -->
+        </div>
       </div>
 
       <div class="modal-footer receipt-actions-footer">
@@ -401,10 +404,10 @@
         <button type="button" class="btn btn-secondary" onclick="CashierPOS.printCurrentReceipt()" title="Print via Windows Driver / Browser Print Preview">
           <i data-lucide="printer"></i> Browser Print
         </button>
-        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadEscPosBin()" title="Download raw ESC/POS binary file">
-          <i data-lucide="file-code"></i> Raw ESC/POS
+        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadReceiptText()" title="Download plain text receipt">
+          <i data-lucide="download"></i> Download Text
         </button>
-        <button type="button" class="btn btn-success" onclick="CashierPOS.startNewTransaction()">
+        <button type="button" class="btn btn-success" onclick="CashierPOS.startNewTransaction()" title="Start New Order">
           <i data-lucide="plus"></i> New Order
         </button>
       </div>
