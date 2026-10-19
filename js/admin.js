@@ -2334,16 +2334,23 @@ const AdminPanel = {
     const sale = (data.sales || []).find(s => s.id === saleId);
     if (!sale) return;
 
+    CashierPOS.lastCompletedSale = sale;
+
     const modal = document.getElementById("modal-sale-success");
     const txnEl = document.getElementById("success-modal-txnid");
     const previewEl = document.getElementById("receipt-preview-content");
+    const printArea = document.getElementById("thermal-print-area");
+
+    const receiptHtml = CashierPOS.generateReceiptHTML(sale);
 
     if (txnEl) txnEl.textContent = `#${sale.transactionNumber}`;
     if (previewEl) {
-      previewEl.innerHTML = CashierPOS.generateReceiptHTML(sale);
+      previewEl.innerHTML = receiptHtml;
+    }
+    if (printArea) {
+      printArea.innerHTML = receiptHtml;
     }
 
-    CashierPOS.lastCompletedSale = sale;
     if (modal) modal.classList.add("active");
   },
 

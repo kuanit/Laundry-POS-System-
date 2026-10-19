@@ -4243,7 +4243,10 @@ img {
   .thermal-print-area {
     display: block !important;
     visibility: visible !important;
-    position: static !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     width: 72mm !important;
     max-width: 72mm !important;
     min-width: 72mm !important;
@@ -4256,6 +4259,7 @@ img {
     line-height: 1.25 !important;
     box-sizing: border-box !important;
     word-break: break-word !important;
+    z-index: 999999 !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
   }

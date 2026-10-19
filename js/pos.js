@@ -764,13 +764,20 @@ const CashierPOS = {
   },
 
   showReceiptSuccessModal(sale) {
+    this.lastCompletedSale = sale;
     const modal = document.getElementById("modal-sale-success");
     const txnIdEl = document.getElementById("success-modal-txnid");
     const previewEl = document.getElementById("receipt-preview-content");
+    const printArea = document.getElementById("thermal-print-area");
+
+    const receiptHtml = this.generateReceiptHTML(sale);
 
     if (txnIdEl) txnIdEl.textContent = `#${sale.transactionNumber}`;
     if (previewEl) {
-      previewEl.innerHTML = this.generateReceiptHTML(sale);
+      previewEl.innerHTML = receiptHtml;
+    }
+    if (printArea) {
+      printArea.innerHTML = receiptHtml;
     }
 
     if (modal) modal.classList.add("active");
@@ -861,7 +868,15 @@ const CashierPOS = {
   },
 
   printCurrentReceipt(targetSale) {
-    const sale = targetSale || this.lastCompletedSale;
+    let sale = targetSale || this.lastCompletedSale;
+    if (!sale) {
+      const data = typeof StorageManager !== "undefined" ? StorageManager.get() : {};
+      if (data.sales && data.sales.length > 0) {
+        sale = data.sales[0];
+        this.lastCompletedSale = sale;
+      }
+    }
+
     if (!sale) {
       if (typeof App !== "undefined" && App.showToast) {
         App.showToast("No sale record found to print.", "warning");
@@ -869,77 +884,106 @@ const CashierPOS = {
       return;
     }
 
+    const receiptHtml = this.generateReceiptHTML(sale);
+
+    // Keep in-page print area in sync as native fallback
     const printArea = document.getElementById("thermal-print-area");
-    if (!printArea) {
-      window.print();
-      return;
+    if (printArea) {
+      printArea.innerHTML = receiptHtml;
     }
 
-    // Populate receipt HTML
-    printArea.innerHTML = this.generateReceiptHTML(sale);
-
-    // Vozy G80 80mm Roll Calibration:
-    // Physical roll width: 80mm, printable width: 72mm (576 dots at 203 DPI)
-    // Temporarily position off-screen to measure actual rendered receipt height in CSS pixels
-    printArea.style.cssText = "display: block !important; position: absolute !important; left: -9999px !important; top: 0 !important; width: 72mm !important; visibility: hidden !important; padding: 1mm 1mm 2mm 1mm !important; box-sizing: border-box !important;";
-    
-    // Standard CSS: 96 pixels = 1 inch = 25.4 mm
-    const heightPx = printArea.scrollHeight || printArea.offsetHeight || 250;
-    // Buffer of 3mm for printer roll feed
-    const heightMm = Math.max(50, Math.ceil((heightPx * 25.4) / 96) + 3);
-
-    // Reset temporary styles
-    printArea.removeAttribute("style");
-
-    // Inject dynamic @page rule for Vozy G80 continuous roll
-    let vozyStyle = document.getElementById("vozy-thermal-print-style");
-    if (!vozyStyle) {
-      vozyStyle = document.createElement("style");
-      vozyStyle.id = "vozy-thermal-print-style";
-      document.head.appendChild(vozyStyle);
+    // Isolate thermal printing into a dedicated hidden iframe
+    // This avoids all dark-mode and viewport/overflow interference from the main POS screen
+    let printFrame = document.getElementById("vozy-receipt-iframe");
+    if (!printFrame) {
+      printFrame = document.createElement("iframe");
+      printFrame.id = "vozy-receipt-iframe";
+      printFrame.setAttribute("aria-hidden", "true");
+      printFrame.style.cssText = "position: fixed; right: 0; bottom: 0; width: 80mm; height: 10px; border: none; opacity: 0; pointer-events: none; z-index: -9999;";
+      document.body.appendChild(printFrame);
     }
 
-    vozyStyle.textContent = `
-      @page {
-        size: 80mm ${heightMm}mm !important;
-        margin: 0mm !important;
-      }
-      @media print {
-        html, body {
-          width: 80mm !important;
-          max-width: 80mm !important;
-          min-width: 80mm !important;
-          height: ${heightMm}mm !important;
-          max-height: ${heightMm}mm !important;
-          margin: 0 auto !important;
-          padding: 0 !important;
-          overflow: hidden !important;
-          background: #ffffff !important;
-          color: #000000 !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        #thermal-print-area,
-        .thermal-print-area {
-          display: block !important;
-          visibility: visible !important;
-          position: static !important;
-          width: 72mm !important;
-          max-width: 72mm !important;
-          min-width: 72mm !important;
-          margin: 0 auto !important;
-          padding: 1mm 1mm 2mm 1mm !important;
-          box-sizing: border-box !important;
-          overflow: hidden !important;
-          page-break-after: avoid !important;
-          break-after: avoid !important;
-        }
-      }
-    `;
+    const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sales Receipt</title>
+  <style>
+    @page {
+      size: 80mm auto;
+      margin: 0mm;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box !important;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 80mm !important;
+      min-width: 80mm !important;
+      max-width: 80mm !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      font-family: 'Courier New', Courier, monospace !important;
+      font-size: 9.5pt !important;
+      line-height: 1.25 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      overflow: visible !important;
+    }
+    .receipt-paper {
+      width: 72mm !important;
+      max-width: 72mm !important;
+      margin: 0 auto !important;
+      padding: 2mm 0 4mm 0 !important;
+      color: #000000 !important;
+    }
+    .receipt-paper * {
+      color: #000000 !important;
+      border-color: #000000 !important;
+      font-family: 'Courier New', Courier, monospace !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-paper" id="paper-content">
+    ${receiptHtml}
+  </div>
+</body>
+</html>`);
+    frameDoc.close();
 
     setTimeout(() => {
-      window.print();
-    }, 60);
+      // Accurately measure receipt content height inside the isolated iframe
+      const paper = frameDoc.getElementById("paper-content");
+      const heightPx = paper ? paper.scrollHeight : (frameDoc.body.scrollHeight || 300);
+      // 96 px = 1 inch = 25.4 mm; add 4mm buffer so the auto-cutter cuts right after content
+      const heightMm = Math.max(45, Math.ceil((heightPx * 25.4) / 96) + 4);
+
+      // Inject dynamically computed @page size tailored to exact content length
+      let dynStyle = frameDoc.getElementById("dynamic-page-size");
+      if (!dynStyle) {
+        dynStyle = frameDoc.createElement("style");
+        dynStyle.id = "dynamic-page-size";
+        frameDoc.head.appendChild(dynStyle);
+      }
+      dynStyle.textContent = `@page { size: 80mm ${heightMm}mm; margin: 0mm; }`;
+
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch (err) {
+          // Fallback to window.print if iframe print is blocked
+          window.print();
+        }
+      }, 50);
+    }, 120);
   },
 
   printTestReceipt() {
