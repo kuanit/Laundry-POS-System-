@@ -811,14 +811,17 @@
                   </div>
 
                   <div class="form-group">
-                    <label for="setting-receipt-footer">Claim Stub Footer Policy Message</label>
+                    <label for="setting-receipt-footer">Receipt Footer Message</label>
                     <input type="text" id="setting-receipt-footer"
-                      placeholder="e.g. Maraming Salamat! Keep this stub safe.">
+                      placeholder="e.g. Thank you for your business!">
                   </div>
 
-                  <div class="text-right" style="display:flex; justify-content:flex-end; gap:8px;">
-                    <button type="button" class="btn btn-secondary" onclick="CashierPOS.printTestReceipt()" title="Test print sample 80mm sales receipt on Vozy G80 printer">
-                      <i data-lucide="printer"></i> Test Vozy G80 Print
+                  <div class="text-right" style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-secondary" onclick="CashierPOS.printTestEscPos()" title="Test direct ESC/POS print & cut on Vozy G80 via USB">
+                      <i data-lucide="zap"></i> Test ESC/POS (USB)
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="CashierPOS.printTestReceipt()" title="Test print sample 80mm sales receipt in Browser Print preview">
+                      <i data-lucide="printer"></i> Test Browser Print
                     </button>
                     <button type="submit" class="btn btn-primary">
                       <i data-lucide="save"></i> Save Laundry Settings
@@ -1335,11 +1338,14 @@
       <div class="receipt-paper-wrapper" id="receipt-preview-content"></div>
 
       <div class="modal-footer receipt-actions-footer">
-        <button type="button" class="btn btn-primary" onclick="CashierPOS.printCurrentReceipt()">
-          <i data-lucide="printer"></i> Print Receipt
+        <button type="button" class="btn btn-primary" onclick="CashierPOS.printEscPosUsb()" title="Direct ESC/POS command to Vozy G80 via USB (Instant print & cut)">
+          <i data-lucide="zap"></i> ESC/POS Direct
         </button>
-        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadReceiptText()">
-          <i data-lucide="download"></i> Download Text
+        <button type="button" class="btn btn-secondary" onclick="CashierPOS.printCurrentReceipt()" title="Print via Windows Driver / Browser Print Preview">
+          <i data-lucide="printer"></i> Browser Print
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadEscPosBin()" title="Download raw ESC/POS binary file">
+          <i data-lucide="file-code"></i> Raw ESC/POS
         </button>
         <button type="button" class="btn btn-secondary" onclick="CashierPOS.closeReceiptModal()">
           Close
@@ -1606,6 +1612,7 @@
   <script src="js/data.js"></script>
   <script src="js/sound.js"></script>
   <script src="js/laundry-splash.js"></script>
+  <script src="js/escpos.js"></script>
   <script src="js/pos.js"></script>
   <script src="js/admin.js?v=3.2"></script>
   <script>

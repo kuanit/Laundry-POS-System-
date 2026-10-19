@@ -957,8 +957,8 @@ const CashierPOS = {
     }, 60);
   },
 
-  printTestReceipt() {
-    const testSale = {
+  getTestSale() {
+    return {
       id: "test-vozy-80",
       transactionNumber: "TEST-VOZY-80",
       cashierName: "Administrator",
@@ -967,16 +967,99 @@ const CashierPOS = {
       paymentMethod: "CASH",
       createdAt: new Date().toISOString(),
       items: [
-        { productName: "Wash & Fold (Regular Load)", quantity: 5, unit: "kg", unitPrice: 35, subtotal: 175.00 },
+        { productName: "DIY Washer (8 kg)", quantity: 4, unit: "kg", unitPrice: 70, subtotal: 280.00 },
         { productName: "Fabric Softener Booster", quantity: 1, unit: "pc", unitPrice: 20, subtotal: 20.00 }
       ],
-      subtotal: 195.00,
+      subtotal: 300.00,
       discount: 0,
       discountLabel: "None",
-      total: 195.00,
-      amountReceived: 200.00,
-      changeAmount: 5.00
+      total: 300.00,
+      amountReceived: 300.00,
+      changeAmount: 0.00
     };
+  },
+
+  async printEscPosUsb(targetSale) {
+    let sale = targetSale || this.lastCompletedSale;
+    if (!sale) {
+      const data = typeof StorageManager !== "undefined" ? StorageManager.get() : {};
+      if (data.sales && data.sales.length > 0) {
+        sale = data.sales[0];
+        this.lastCompletedSale = sale;
+      }
+    }
+
+    if (!sale) {
+      if (typeof App !== "undefined" && App.showToast) {
+        App.showToast("No sale record found to print.", "warning");
+      }
+      return;
+    }
+
+    if (typeof EscPosService === "undefined" || !EscPosService.isUsbSupported()) {
+      if (typeof App !== "undefined" && App.showToast) {
+        App.showToast("Direct WebUSB requires Google Chrome or Microsoft Edge. Opening Browser Print...", "info");
+      }
+      this.printCurrentReceipt(sale);
+      return;
+    }
+
+    try {
+      if (typeof App !== "undefined" && App.showToast) {
+        App.showToast("Connecting to Vozy G80 via USB...", "info");
+      }
+      await EscPosService.printUsb(sale);
+      if (typeof App !== "undefined" && App.showToast) {
+        App.showToast("✓ Receipt sent directly to Vozy G80 via ESC/POS!", "success");
+      }
+    } catch (err) {
+      console.warn("ESC/POS USB error:", err);
+      if (err.message && err.message.includes("cancelled")) {
+        if (typeof App !== "undefined" && App.showToast) {
+          App.showToast("Printer connection cancelled.", "info");
+        }
+      } else if (err.message && (err.message.includes("exclusive lock") || err.name === "SecurityError")) {
+        if (typeof App !== "undefined" && App.showToast) {
+          App.showToast("Windows printer driver has exclusive USB lock. Opening Browser Print...", "warning");
+        }
+        this.printCurrentReceipt(sale);
+      } else {
+        if (typeof App !== "undefined" && App.showToast) {
+          App.showToast(err.message || "Failed to communicate with ESC/POS printer.", "danger");
+        }
+        // Fallback to browser print preview
+        this.printCurrentReceipt(sale);
+      }
+    }
+  },
+
+  downloadEscPosBin(targetSale) {
+    let sale = targetSale || this.lastCompletedSale;
+    if (!sale) {
+      const data = typeof StorageManager !== "undefined" ? StorageManager.get() : {};
+      if (data.sales && data.sales.length > 0) {
+        sale = data.sales[0];
+        this.lastCompletedSale = sale;
+      }
+    }
+    if (!sale) return;
+
+    if (typeof EscPosService !== "undefined") {
+      EscPosService.downloadBin(sale);
+      if (typeof App !== "undefined" && App.showToast) {
+        App.showToast("✓ Downloaded raw ESC/POS binary file (.bin)", "success");
+      }
+    }
+  },
+
+  async printTestEscPos() {
+    const testSale = this.getTestSale();
+    this.lastCompletedSale = testSale;
+    await this.printEscPosUsb(testSale);
+  },
+
+  printTestReceipt() {
+    const testSale = this.getTestSale();
     this.lastCompletedSale = testSale;
     this.printCurrentReceipt(testSale);
   },

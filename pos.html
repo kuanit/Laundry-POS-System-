@@ -395,11 +395,14 @@
       </div>
 
       <div class="modal-footer receipt-actions-footer">
-        <button type="button" class="btn btn-primary" onclick="CashierPOS.printCurrentReceipt()">
-          <i data-lucide="printer"></i> Print Receipt
+        <button type="button" class="btn btn-primary" onclick="CashierPOS.printEscPosUsb()" title="Direct ESC/POS command to Vozy G80 via USB (Instant print & cut)">
+          <i data-lucide="zap"></i> ESC/POS Direct
         </button>
-        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadReceiptText()">
-          <i data-lucide="download"></i> Download Text
+        <button type="button" class="btn btn-secondary" onclick="CashierPOS.printCurrentReceipt()" title="Print via Windows Driver / Browser Print Preview">
+          <i data-lucide="printer"></i> Browser Print
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadEscPosBin()" title="Download raw ESC/POS binary file">
+          <i data-lucide="file-code"></i> Raw ESC/POS
         </button>
         <button type="button" class="btn btn-success" onclick="CashierPOS.startNewTransaction()">
           <i data-lucide="plus"></i> New Order
@@ -715,6 +718,7 @@
   <script src="js/data.js"></script>
   <script src="js/sound.js"></script>
   <script src="js/laundry-splash.js"></script>
+  <script src="js/escpos.js"></script>
   <script src="js/pos.js"></script>
   <script>
     const PosSite = {
