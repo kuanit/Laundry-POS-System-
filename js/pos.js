@@ -862,7 +862,7 @@ const CashierPOS = {
       </div>
 
       <div style="text-align: center; font-size: 0.75rem; color: #222; margin-top: 8px; padding-top: 5px; border-top: 1px dashed #000;">
-        <p style="margin: 0; font-weight: 600;">${settings.receiptFooter || 'Thank you for your purchase!'}</p>
+        <p style="margin: 0; font-weight: 600;">${((settings.receiptFooter || 'Thank you for your business!').replace(/Please present this Claim Stub upon pickup\.?/gi, '').replace(/Keep this stub safe\.?/gi, '').replace(/Claim Stub.*$/gi, '').trim()) || 'Thank you for your business!'}</p>
       </div>
     `;
   },
@@ -884,106 +884,77 @@ const CashierPOS = {
       return;
     }
 
-    const receiptHtml = this.generateReceiptHTML(sale);
-
-    // Keep in-page print area in sync as native fallback
     const printArea = document.getElementById("thermal-print-area");
-    if (printArea) {
-      printArea.innerHTML = receiptHtml;
+    if (!printArea) {
+      window.print();
+      return;
     }
 
-    // Isolate thermal printing into a dedicated hidden iframe
-    // This avoids all dark-mode and viewport/overflow interference from the main POS screen
-    let printFrame = document.getElementById("vozy-receipt-iframe");
-    if (!printFrame) {
-      printFrame = document.createElement("iframe");
-      printFrame.id = "vozy-receipt-iframe";
-      printFrame.setAttribute("aria-hidden", "true");
-      printFrame.style.cssText = "position: fixed; right: 0; bottom: 0; width: 80mm; height: 10px; border: none; opacity: 0; pointer-events: none; z-index: -9999;";
-      document.body.appendChild(printFrame);
+    // Clean up any old iframe if present
+    const oldIframe = document.getElementById("vozy-receipt-iframe");
+    if (oldIframe) oldIframe.remove();
+
+    // Populate receipt HTML into the dedicated print area
+    const receiptHtml = this.generateReceiptHTML(sale);
+    printArea.innerHTML = receiptHtml;
+
+    // Temporarily position printArea to measure actual rendered receipt height in CSS pixels
+    printArea.style.cssText = "display: block !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 72mm !important; visibility: hidden !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box !important; font-family: 'Courier New', Courier, monospace !important; font-size: 9.5pt !important; line-height: 1.25 !important;";
+    
+    // Standard CSS: 96 pixels = 1 inch = 25.4 mm
+    const heightPx = printArea.scrollHeight || printArea.offsetHeight || 250;
+    // Add 4mm buffer for thermal cutter clearance cleanly below text
+    const heightMm = Math.max(35, Math.ceil((heightPx * 25.4) / 96) + 4);
+
+    // Remove inline measurement styles
+    printArea.removeAttribute("style");
+
+    // Dynamic @page rule on top-level document for exact content-based length and zero top space
+    let dynStyle = document.getElementById("vozy-thermal-print-style");
+    if (!dynStyle) {
+      dynStyle = document.createElement("style");
+      dynStyle.id = "vozy-thermal-print-style";
+      document.head.appendChild(dynStyle);
     }
 
-    const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
-    frameDoc.open();
-    frameDoc.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Sales Receipt</title>
-  <style>
-    @page {
-      size: 80mm auto;
-      margin: 0mm;
-    }
-    *, *::before, *::after {
-      box-sizing: border-box !important;
-      margin: 0;
-      padding: 0;
-    }
-    html, body {
-      width: 80mm !important;
-      min-width: 80mm !important;
-      max-width: 80mm !important;
-      margin: 0 auto !important;
-      padding: 0 !important;
-      background: #ffffff !important;
-      background-color: #ffffff !important;
-      color: #000000 !important;
-      font-family: 'Courier New', Courier, monospace !important;
-      font-size: 9.5pt !important;
-      line-height: 1.25 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      overflow: visible !important;
-    }
-    .receipt-paper {
-      width: 72mm !important;
-      max-width: 72mm !important;
-      margin: 0 auto !important;
-      padding: 2mm 0 4mm 0 !important;
-      color: #000000 !important;
-    }
-    .receipt-paper * {
-      color: #000000 !important;
-      border-color: #000000 !important;
-      font-family: 'Courier New', Courier, monospace !important;
-    }
-  </style>
-</head>
-<body>
-  <div class="receipt-paper" id="paper-content">
-    ${receiptHtml}
-  </div>
-</body>
-</html>`);
-    frameDoc.close();
+    dynStyle.textContent = `
+      @page {
+        size: 80mm ${heightMm}mm;
+        margin: 0mm;
+      }
+      @media print {
+        html, body {
+          width: 80mm !important;
+          max-width: 80mm !important;
+          min-width: 80mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+        }
+        #thermal-print-area,
+        .thermal-print-area {
+          display: block !important;
+          visibility: visible !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          margin: 0 auto !important;
+          padding: 0 !important;
+          width: 72mm !important;
+          max-width: 72mm !important;
+          min-width: 72mm !important;
+          box-sizing: border-box !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+      }
+    `;
 
     setTimeout(() => {
-      // Accurately measure receipt content height inside the isolated iframe
-      const paper = frameDoc.getElementById("paper-content");
-      const heightPx = paper ? paper.scrollHeight : (frameDoc.body.scrollHeight || 300);
-      // 96 px = 1 inch = 25.4 mm; add 4mm buffer so the auto-cutter cuts right after content
-      const heightMm = Math.max(45, Math.ceil((heightPx * 25.4) / 96) + 4);
-
-      // Inject dynamically computed @page size tailored to exact content length
-      let dynStyle = frameDoc.getElementById("dynamic-page-size");
-      if (!dynStyle) {
-        dynStyle = frameDoc.createElement("style");
-        dynStyle.id = "dynamic-page-size";
-        frameDoc.head.appendChild(dynStyle);
-      }
-      dynStyle.textContent = `@page { size: 80mm ${heightMm}mm; margin: 0mm; }`;
-
-      setTimeout(() => {
-        try {
-          printFrame.contentWindow.focus();
-          printFrame.contentWindow.print();
-        } catch (err) {
-          // Fallback to window.print if iframe print is blocked
-          window.print();
-        }
-      }, 50);
-    }, 120);
+      window.print();
+    }, 60);
   },
 
   printTestReceipt() {
@@ -1048,8 +1019,8 @@ const CashierPOS = {
     text += `TOTAL:        ₱${sale.total.toFixed(2)}\n`;
     text += `Received:     ₱${sale.amountReceived.toFixed(2)}\n`;
     text += `Change:       ₱${sale.changeAmount.toFixed(2)}\n`;
-    text += `================================\n`;
-    text += `   ${settings.receiptFooter || 'Thank you for your purchase!'}\n`;
+    const cleanTxtFooter = ((settings.receiptFooter || 'Thank you for your business!').replace(/Please present this Claim Stub upon pickup\.?/gi, '').replace(/Keep this stub safe\.?/gi, '').replace(/Claim Stub.*$/gi, '').trim()) || 'Thank you for your business!';
+    text += `   ${cleanTxtFooter}\n`;
     text += `================================\n`;
 
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });

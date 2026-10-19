@@ -15,7 +15,7 @@ const SEED_DATA = {
     defaultLowStockThreshold: 10,
     claimPrefix: "LND-",
     defaultTurnaroundHours: 24,
-    receiptFooter: "Thank you for your business! Please present this Claim Stub upon pickup."
+    receiptFooter: "Thank you for your business!"
   },
   categories: [],
   products: [],

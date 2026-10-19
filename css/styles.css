@@ -4192,8 +4192,7 @@ img {
 }
 
 @page {
-  /* Default for Vozy G80 80mm roll: continuous roll with zero margins */
-  size: 80mm auto;
+  /* Zero margins default for continuous thermal roll */
   margin: 0mm;
 }
 
@@ -4209,7 +4208,7 @@ img {
     max-width: 80mm !important;
     height: auto !important;
     min-height: auto !important;
-    margin: 0 auto !important;
+    margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     background-color: #ffffff !important;
@@ -4238,7 +4237,7 @@ img {
     visibility: hidden !important;
   }
 
-  /* Thermal print container: exact 72mm printable width for Vozy G80 80mm roll */
+  /* Thermal print container: exact 72mm printable width for Vozy G80 80mm roll with zero space */
   #thermal-print-area,
   .thermal-print-area {
     display: block !important;
@@ -4251,7 +4250,7 @@ img {
     max-width: 72mm !important;
     min-width: 72mm !important;
     margin: 0 auto !important;
-    padding: 1mm 1mm 2mm 1mm !important;
+    padding: 0 !important;
     font-family: 'Courier New', Courier, monospace !important;
     font-size: 9.5pt !important;
     color: #000000 !important;
