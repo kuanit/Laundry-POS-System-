@@ -4184,16 +4184,16 @@ img {
 
 
 /* =========================================================
-   THERMAL RECEIPT PRINT STYLES (80mm / 72mm & 58mm Printers)
-   Optimized for POS-80 thermal printers in Google Chrome / Edge
+   THERMAL RECEIPT PRINT STYLES (VOZY G80 80MM / 72MM)
+   Calibrated for Vozy G80 80mm continuous roll in Chrome / Edge
    ========================================================= */
 .thermal-print-area {
   display: none;
 }
 
 @page {
-  /* Targets 80mm receipt rolls with zero margins */
-  size: 80mm 297mm;
+  /* Default for Vozy G80 80mm roll: continuous roll with zero margins */
+  size: 80mm auto;
   margin: 0mm;
 }
 
@@ -4238,7 +4238,7 @@ img {
     visibility: hidden !important;
   }
 
-  /* Thermal print container: exact 72mm printable width for 80mm thermal roll */
+  /* Thermal print container: exact 72mm printable width for Vozy G80 80mm roll */
   #thermal-print-area,
   .thermal-print-area {
     display: block !important;
@@ -4248,13 +4248,16 @@ img {
     max-width: 72mm !important;
     min-width: 72mm !important;
     margin: 0 auto !important;
-    padding: 2mm 0 8mm 0 !important;
+    padding: 1mm 1mm 2mm 1mm !important;
     font-family: 'Courier New', Courier, monospace !important;
-    font-size: 10pt !important;
+    font-size: 9.5pt !important;
     color: #000000 !important;
     background: #ffffff !important;
     line-height: 1.25 !important;
     box-sizing: border-box !important;
+    word-break: break-word !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   /* Force all receipt text, borders, tables, and icons to pure high-contrast black */
@@ -4281,10 +4284,9 @@ img {
     background-color: transparent !important;
   }
 
-  /* Keep claim stub and receipt blocks intact without unwanted page breaks */
+  /* Keep receipt block intact without unwanted page breaks */
   #thermal-print-area > div,
-  .receipt-paper-wrapper,
-  .claim-stub-wrapper {
+  .receipt-paper-wrapper {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
@@ -4292,8 +4294,8 @@ img {
   .print-receipt-header {
     text-align: center;
     border-bottom: 1px dashed #000000;
-    padding-bottom: 3mm;
-    margin-bottom: 3mm;
+    padding-bottom: 2mm;
+    margin-bottom: 2mm;
   }
 
   .print-store-name {
@@ -4311,7 +4313,7 @@ img {
     width: 100%;
     font-size: 9pt;
     border-collapse: collapse;
-    margin-bottom: 3mm;
+    margin-bottom: 2mm;
   }
 
   .print-items-table th {
@@ -4321,7 +4323,7 @@ img {
   }
 
   .print-items-table td {
-    padding: 1.5mm 0;
+    padding: 1mm 0;
   }
 
   .print-totals {
@@ -4340,8 +4342,8 @@ img {
   .print-grand-total {
     font-weight: bold;
     font-size: 11pt;
-    border-top: 1px solid #000000;
-    border-bottom: 1px solid #000000;
+    border-top: 1.5px solid #000000;
+    border-bottom: 1.5px solid #000000;
     padding: 1.5mm 0;
     margin: 2mm 0;
   }
@@ -4349,7 +4351,7 @@ img {
   .print-footer-note {
     text-align: center;
     font-size: 8pt;
-    margin-top: 4mm;
+    margin-top: 3mm;
     border-top: 1px dashed #000000;
     padding-top: 2mm;
   }

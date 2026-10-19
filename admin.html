@@ -816,7 +816,10 @@
                       placeholder="e.g. Maraming Salamat! Keep this stub safe.">
                   </div>
 
-                  <div class="text-right">
+                  <div class="text-right" style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" class="btn btn-secondary" onclick="CashierPOS.printTestReceipt()" title="Test print sample 80mm sales receipt on Vozy G80 printer">
+                      <i data-lucide="printer"></i> Test Vozy G80 Print
+                    </button>
                     <button type="submit" class="btn btn-primary">
                       <i data-lucide="save"></i> Save Laundry Settings
                     </button>
@@ -1318,22 +1321,22 @@
     </div>
   </div>
 
-  <!-- CLAIM STUB / RECEIPT AUDIT MODAL -->
+  <!-- SALES RECEIPT AUDIT MODAL -->
   <div id="modal-sale-success" class="modal-backdrop">
     <div class="modal-dialog modal-receipt-dialog">
       <div class="success-banner" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">
         <div class="success-icon-circle">
           <i data-lucide="receipt"></i>
         </div>
-        <h2>CLAIM STUB & RECEIPT AUDIT</h2>
-        <p class="success-txn-text">Claim Ticket <span id="success-modal-txnid">#LND-2026-121</span></p>
+        <h2>SALES RECEIPT AUDIT</h2>
+        <p class="success-txn-text">Receipt <span id="success-modal-txnid">#TXN-2026-121</span></p>
       </div>
 
       <div class="receipt-paper-wrapper" id="receipt-preview-content"></div>
 
       <div class="modal-footer receipt-actions-footer">
         <button type="button" class="btn btn-primary" onclick="CashierPOS.printCurrentReceipt()">
-          <i data-lucide="printer"></i> Print Claim Stub
+          <i data-lucide="printer"></i> Print Receipt
         </button>
         <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadReceiptText()">
           <i data-lucide="download"></i> Download Text

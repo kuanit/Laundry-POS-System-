@@ -2338,7 +2338,7 @@ const AdminPanel = {
     const txnEl = document.getElementById("success-modal-txnid");
     const previewEl = document.getElementById("receipt-preview-content");
 
-    if (txnEl) txnEl.textContent = sale.claimNumber || `#${sale.transactionNumber}`;
+    if (txnEl) txnEl.textContent = `#${sale.transactionNumber}`;
     if (previewEl) {
       previewEl.innerHTML = CashierPOS.generateReceiptHTML(sale);
     }

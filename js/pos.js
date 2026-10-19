@@ -768,7 +768,7 @@ const CashierPOS = {
     const txnIdEl = document.getElementById("success-modal-txnid");
     const previewEl = document.getElementById("receipt-preview-content");
 
-    if (txnIdEl) txnIdEl.textContent = `#${sale.claimNumber || sale.transactionNumber}`;
+    if (txnIdEl) txnIdEl.textContent = `#${sale.transactionNumber}`;
     if (previewEl) {
       previewEl.innerHTML = this.generateReceiptHTML(sale);
     }
@@ -787,68 +787,64 @@ const CashierPOS = {
     if (searchInput) searchInput.focus();
   },
 
-  /* --- OFFICIAL RECEIPT & LAUNDRY CLAIM STUB GENERATOR --- */
+  /* --- VOZY G80 80MM SALES RECEIPT GENERATOR --- */
   generateReceiptHTML(sale) {
     const data = StorageManager.get();
     const settings = data.settings || {};
     const dateFormatted = new Date(sale.createdAt).toLocaleString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
     });
-    const dueFormatted = sale.dueDate ? new Date(sale.dueDate).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-    }) : "48 Hours";
 
     let itemsHtml = "";
     sale.items.forEach(item => {
       const unit = item.unit || "pc";
       itemsHtml += `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.82rem;">
-          <span style="max-width: 68%;">
-            <b>${item.productName}</b><br>
-            <span style="color:#555;">${item.quantity} ${unit} × ₱${item.unitPrice.toFixed(2)}</span>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; font-size: 0.85rem; line-height: 1.25;">
+          <span style="max-width: 68%; word-break: break-word;">
+            <b style="color: #000;">${item.productName}</b><br>
+            <span style="font-size: 0.78rem; color: #222;">${item.quantity} ${unit} × ₱${item.unitPrice.toFixed(2)}</span>
           </span>
-          <span style="font-weight: 700;">₱${item.subtotal.toFixed(2)}</span>
+          <span style="font-weight: 700; color: #000; white-space: nowrap;">₱${item.subtotal.toFixed(2)}</span>
         </div>
       `;
     });
 
-    const statusBadge = `<span style="background:#e0f2fe; color:#0369a1; padding: 2px 8px; border-radius: 9999px; font-weight:700; font-size:0.75rem;">${(sale.laundryStatus || 'RECEIVED').replace(/_/g, ' ')}</span>`;
-
     return `
-      <!-- TOP PORTION: OFFICIAL STORE RECEIPT -->
-      <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 10px;">
-        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px;">${settings.storeName || 'Brand Name'}</h3>
-        <div style="font-size: 0.75rem; color: #444; margin-top: 2px;">${settings.tagline || 'Professional Laundry & Dry Cleaning'}</div>
-        <div style="font-size: 0.72rem; color: #444; margin-top: 2px;">${settings.address || ''}</div>
-        <div style="font-size: 0.72rem; color: #444;">${settings.contact || ''}</div>
-        <div style="margin-top: 6px; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px; color: #0284c7;">OFFICIAL SALES RECEIPT</div>
+      <!-- VOZY G80 80MM THERMAL RECEIPT -->
+      <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: #000;">${settings.storeName || 'Brand Name'}</h3>
+        ${settings.tagline ? `<div style="font-size: 0.75rem; color: #222; margin-top: 1px;">${settings.tagline}</div>` : ''}
+        ${settings.address ? `<div style="font-size: 0.72rem; color: #333; margin-top: 1px;">${settings.address}</div>` : ''}
+        ${settings.contact ? `<div style="font-size: 0.72rem; color: #333;">${settings.contact}</div>` : ''}
+        <div style="margin-top: 4px; font-weight: 800; font-size: 0.82rem; letter-spacing: 1px; color: #000;">SALES RECEIPT</div>
       </div>
 
-      <div style="font-size: 0.78rem; margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 6px;">
-        <div style="display:flex; justify-content:space-between;"><span><b>Txn Ref:</b> #${sale.transactionNumber}</span> <span><b>Date:</b> ${dateFormatted}</span></div>
-        <div style="display:flex; justify-content:space-between; margin-top:2px;"><span><b>Cashier:</b> ${sale.cashierName}</span> <span><b>Payment:</b> ${sale.paymentMethod}</span></div>
+      <div style="font-size: 0.78rem; margin-bottom: 6px; border-bottom: 1px dashed #000; padding-bottom: 4px; color: #000; line-height: 1.3;">
+        <div style="display:flex; justify-content:space-between;"><span><b>Receipt #:</b> #${sale.transactionNumber}</span> <span><b>Date:</b> ${dateFormatted}</span></div>
+        <div style="display:flex; justify-content:space-between; margin-top: 2px;"><span><b>Cashier:</b> ${sale.cashierName}</span> <span><b>Payment:</b> ${sale.paymentMethod}</span></div>
+        ${sale.customerName && sale.customerName !== 'Walk-in Customer' ? `<div style="margin-top: 2px;"><b>Customer:</b> ${sale.customerName}</div>` : ''}
       </div>
 
-      <div style="margin-bottom: 8px;">
+      <div style="margin-bottom: 6px;">
         ${itemsHtml}
       </div>
 
-      <div style="border-top: 1px dashed #000; padding-top: 6px; font-size: 0.85rem;">
+      <div style="border-top: 1px dashed #000; padding-top: 5px; font-size: 0.85rem; color: #000; line-height: 1.35;">
         <div style="display:flex; justify-content:space-between; margin-bottom: 2px;">
           <span>Subtotal:</span>
           <span>₱${sale.subtotal.toFixed(2)}</span>
         </div>
         ${sale.discount > 0 ? `
-          <div style="display:flex; justify-content:space-between; margin-bottom: 2px; color: #059669; font-weight: 600;">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 2px; font-weight: 600;">
             <span>Discount (${sale.discountLabel}):</span>
             <span>-₱${sale.discount.toFixed(2)}</span>
           </div>
         ` : ''}
-        <div style="display:flex; justify-content:space-between; font-weight: 900; font-size: 1.1rem; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin: 4px 0;">
-          <span>TOTAL PAID:</span>
+        <div style="display:flex; justify-content:space-between; font-weight: 900; font-size: 1.15rem; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0;">
+          <span>TOTAL:</span>
           <span>₱${sale.total.toFixed(2)}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size: 0.8rem; margin-top: 4px;">
+        <div style="display:flex; justify-content:space-between; font-size: 0.82rem; margin-top: 3px;">
           <span>Amount Received:</span>
           <span>₱${sale.amountReceived.toFixed(2)}</span>
         </div>
@@ -858,56 +854,116 @@ const CashierPOS = {
         </div>
       </div>
 
-      <!-- BOTTOM PORTION: DEDICATED LAUNDRY CLAIM STUB -->
-      <div style="border: 2px dashed #0284c7; background: rgba(2, 132, 199, 0.05); border-radius: 8px; padding: 10px; margin-top: 12px; text-align: left;">
-        <div style="text-align: center; margin-bottom: 6px;">
-          <span style="font-weight: 900; font-size: 0.95rem; letter-spacing: 1px; color: #0284c7;">🧺 CUSTOMER LAUNDRY CLAIM STUB</span>
-          <div style="font-size: 0.72rem; color: #555;">Present this claim stub upon pickup</div>
-        </div>
-
-        <div style="background: #fff; color: #000; border: 1px solid #ccc; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-size:0.7rem; color:#666;">CLAIM TICKET NUMBER:</div>
-              <div style="font-size:1.15rem; font-weight:900; color:#0284c7; font-family: monospace;">${sale.claimNumber || '#' + sale.transactionNumber}</div>
-            </div>
-            <div>${statusBadge}</div>
-          </div>
-        </div>
-
-        <div style="font-size: 0.78rem; line-height: 1.4;">
-          <div><b>Customer:</b> ${sale.customerName}</div>
-          <div><b>Contact No:</b> ${sale.customerPhone}</div>
-          <div style="margin-top: 3px; color: #b45309; font-weight: 700;"><b>Promised Ready Date:</b> ${dueFormatted}</div>
-          ${sale.totalWeight ? `<div><b>Total Weight:</b> ${sale.totalWeight} kg</div>` : ''}
-          ${sale.specialInstructions ? `<div style="margin-top:2px; font-style:italic; color:#475569;"><b>Care Notes:</b> "${sale.specialInstructions}"</div>` : ''}
-        </div>
-
-        <!-- Simulated Claim Barcode -->
-        <div style="text-align:center; margin-top: 8px; font-family: monospace; letter-spacing: 3px; font-weight: 700; font-size: 0.85rem; color: #333;">
-          ||| | |||| | ||| || |||| | ||
-          <div style="font-size:0.7rem; letter-spacing: 1px;">*${sale.claimNumber || sale.transactionNumber}*</div>
-        </div>
-      </div>
-
-      <div style="text-align: center; font-size: 0.72rem; color:#64748b; margin-top: 10px; padding-top: 6px;">
-        <p style="margin: 0;">${settings.receiptFooter || 'Maraming Salamat! Keep this stub safe.'}</p>
-        <p style="margin: 2px 0 0;">Unclaimed items after 30 days will be disposed of per policy.</p>
+      <div style="text-align: center; font-size: 0.75rem; color: #222; margin-top: 8px; padding-top: 5px; border-top: 1px dashed #000;">
+        <p style="margin: 0; font-weight: 600;">${settings.receiptFooter || 'Thank you for your purchase!'}</p>
       </div>
     `;
   },
 
-  printCurrentReceipt() {
-    const sale = this.lastCompletedSale;
-    if (!sale) return;
+  printCurrentReceipt(targetSale) {
+    const sale = targetSale || this.lastCompletedSale;
+    if (!sale) {
+      if (typeof App !== "undefined" && App.showToast) {
+        App.showToast("No sale record found to print.", "warning");
+      }
+      return;
+    }
 
     const printArea = document.getElementById("thermal-print-area");
-    if (printArea) {
-      printArea.innerHTML = this.generateReceiptHTML(sale);
-      setTimeout(() => {
-        window.print();
-      }, 50);
+    if (!printArea) {
+      window.print();
+      return;
     }
+
+    // Populate receipt HTML
+    printArea.innerHTML = this.generateReceiptHTML(sale);
+
+    // Vozy G80 80mm Roll Calibration:
+    // Physical roll width: 80mm, printable width: 72mm (576 dots at 203 DPI)
+    // Temporarily position off-screen to measure actual rendered receipt height in CSS pixels
+    printArea.style.cssText = "display: block !important; position: absolute !important; left: -9999px !important; top: 0 !important; width: 72mm !important; visibility: hidden !important; padding: 1mm 1mm 2mm 1mm !important; box-sizing: border-box !important;";
+    
+    // Standard CSS: 96 pixels = 1 inch = 25.4 mm
+    const heightPx = printArea.scrollHeight || printArea.offsetHeight || 250;
+    // Buffer of 3mm for printer roll feed
+    const heightMm = Math.max(50, Math.ceil((heightPx * 25.4) / 96) + 3);
+
+    // Reset temporary styles
+    printArea.removeAttribute("style");
+
+    // Inject dynamic @page rule for Vozy G80 continuous roll
+    let vozyStyle = document.getElementById("vozy-thermal-print-style");
+    if (!vozyStyle) {
+      vozyStyle = document.createElement("style");
+      vozyStyle.id = "vozy-thermal-print-style";
+      document.head.appendChild(vozyStyle);
+    }
+
+    vozyStyle.textContent = `
+      @page {
+        size: 80mm ${heightMm}mm !important;
+        margin: 0mm !important;
+      }
+      @media print {
+        html, body {
+          width: 80mm !important;
+          max-width: 80mm !important;
+          min-width: 80mm !important;
+          height: ${heightMm}mm !important;
+          max-height: ${heightMm}mm !important;
+          margin: 0 auto !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        #thermal-print-area,
+        .thermal-print-area {
+          display: block !important;
+          visibility: visible !important;
+          position: static !important;
+          width: 72mm !important;
+          max-width: 72mm !important;
+          min-width: 72mm !important;
+          margin: 0 auto !important;
+          padding: 1mm 1mm 2mm 1mm !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+      }
+    `;
+
+    setTimeout(() => {
+      window.print();
+    }, 60);
+  },
+
+  printTestReceipt() {
+    const testSale = {
+      id: "test-vozy-80",
+      transactionNumber: "TEST-VOZY-80",
+      cashierName: "Administrator",
+      customerName: "Walk-in Customer",
+      customerPhone: "",
+      paymentMethod: "CASH",
+      createdAt: new Date().toISOString(),
+      items: [
+        { productName: "Wash & Fold (Regular Load)", quantity: 5, unit: "kg", unitPrice: 35, subtotal: 175.00 },
+        { productName: "Fabric Softener Booster", quantity: 1, unit: "pc", unitPrice: 20, subtotal: 20.00 }
+      ],
+      subtotal: 195.00,
+      discount: 0,
+      discountLabel: "None",
+      total: 195.00,
+      amountReceived: 200.00,
+      changeAmount: 5.00
+    };
+    this.lastCompletedSale = testSale;
+    this.printCurrentReceipt(testSale);
   },
 
   downloadReceiptText() {
@@ -919,49 +975,44 @@ const CashierPOS = {
     const dateFormatted = new Date(sale.createdAt).toLocaleString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
     });
-    const dueFormatted = sale.dueDate ? new Date(sale.dueDate).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-    }) : "48 Hours";
 
     let text = `================================\n`;
-    text += `   ${settings.storeName || 'Brand Name POS'}\n`;
-    text += `      Official Receipt & Claim\n`;
-    text += `================================\n\n`;
-    text += `Claim Ticket #: ${sale.claimNumber || sale.transactionNumber}\n`;
-    text += `Customer Name:  ${sale.customerName}\n`;
-    text += `Mobile No.:     ${sale.customerPhone}\n`;
-    text += `Status:         ${sale.laundryStatus || 'RECEIVED'}\n`;
-    text += `Drop-off Date:  ${dateFormatted}\n`;
-    text += `PROMISED READY: ${dueFormatted}\n`;
-    text += `Cashier:        ${sale.cashierName}\n\n`;
+    text += `   ${(settings.storeName || 'Brand Name').toUpperCase()}\n`;
+    if (settings.tagline) text += `   ${settings.tagline}\n`;
+    if (settings.address) text += `   ${settings.address}\n`;
+    if (settings.contact) text += `   ${settings.contact}\n`;
+    text += `================================\n`;
+    text += `Receipt #: ${sale.transactionNumber}\n`;
+    text += `Date:      ${dateFormatted}\n`;
+    text += `Cashier:   ${sale.cashierName}\n`;
+    text += `Payment:   ${sale.paymentMethod}\n`;
+    if (sale.customerName && sale.customerName !== 'Walk-in Customer') {
+      text += `Customer:  ${sale.customerName}\n`;
+    }
     text += `--------------------------------\n`;
 
     sale.items.forEach(item => {
-      const line = `${item.productName.padEnd(18).slice(0, 18)} ${item.quantity}${item.unit}x₱${item.unitPrice} ₱${item.subtotal.toFixed(2)}\n`;
+      const line = `${item.productName.padEnd(16).slice(0, 16)} ${item.quantity}${item.unit || 'pc'}x₱${item.unitPrice} ₱${item.subtotal.toFixed(2)}\n`;
       text += line;
     });
 
     text += `--------------------------------\n`;
-    text += `Subtotal:                 ₱${sale.subtotal.toFixed(2)}\n`;
+    text += `Subtotal:     ₱${sale.subtotal.toFixed(2)}\n`;
     if (sale.discount > 0) {
       text += `Discount (${sale.discountLabel}): -₱${sale.discount.toFixed(2)}\n`;
     }
-    text += `TOTAL PAID:               ₱${sale.total.toFixed(2)}\n\n`;
-    text += `Payment: ${sale.paymentMethod}\n`;
-    text += `Received: ₱${sale.amountReceived.toFixed(2)}\n`;
-    text += `Change:   ₱${sale.changeAmount.toFixed(2)}\n`;
-    if (sale.specialInstructions) {
-      text += `Notes: ${sale.specialInstructions}\n`;
-    }
+    text += `TOTAL:        ₱${sale.total.toFixed(2)}\n`;
+    text += `Received:     ₱${sale.amountReceived.toFixed(2)}\n`;
+    text += `Change:       ₱${sale.changeAmount.toFixed(2)}\n`;
     text += `================================\n`;
-    text += `  ${settings.receiptFooter || 'Maraming Salamat! Keep this stub safe.'}\n`;
+    text += `   ${settings.receiptFooter || 'Thank you for your purchase!'}\n`;
     text += `================================\n`;
 
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `LaundryClaim_${sale.claimNumber || sale.transactionNumber}.txt`;
+    a.download = `Receipt_${sale.transactionNumber}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();

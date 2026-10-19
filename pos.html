@@ -378,31 +378,31 @@
   </div>
 
 
-  <!-- 2. SALE COMPLETED & LAUNDRY CLAIM STUB RECEIPT MODAL -->
+  <!-- 2. SALE COMPLETED & SALES RECEIPT MODAL -->
   <div id="modal-sale-success" class="modal-backdrop">
     <div class="modal-dialog modal-receipt-dialog">
       <div class="success-banner">
         <div class="success-icon-circle">
           <i data-lucide="check"></i>
         </div>
-        <h2>ORDER COMPLETED!</h2>
-        <p class="success-txn-text">Claim Ticket <span id="success-modal-txnid">#LND-2026-125</span></p>
+        <h2>SALE COMPLETED!</h2>
+        <p class="success-txn-text">Receipt <span id="success-modal-txnid">#TXN-2026-125</span></p>
       </div>
 
-      <!-- Live Receipt & Claim Stub Card -->
+      <!-- Live Receipt Card -->
       <div class="receipt-paper-wrapper" id="receipt-preview-content">
         <!-- Rendered dynamically -->
       </div>
 
       <div class="modal-footer receipt-actions-footer">
         <button type="button" class="btn btn-primary" onclick="CashierPOS.printCurrentReceipt()">
-          <i data-lucide="printer"></i> Print Claim Stub & Receipt
+          <i data-lucide="printer"></i> Print Receipt
         </button>
         <button type="button" class="btn btn-secondary" onclick="CashierPOS.downloadReceiptText()">
           <i data-lucide="download"></i> Download Text
         </button>
         <button type="button" class="btn btn-success" onclick="CashierPOS.startNewTransaction()">
-          <i data-lucide="plus"></i> New Laundry Order
+          <i data-lucide="plus"></i> New Order
         </button>
       </div>
     </div>
