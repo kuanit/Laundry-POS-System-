@@ -24,6 +24,16 @@
     document.documentElement.setAttribute("data-theme", "dark");
   </script>
 
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Laundry POS">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
   <link rel="stylesheet" href="css/styles.css?v=4.0">
 </head>
 
@@ -437,6 +447,12 @@
     };
 
     document.addEventListener("DOMContentLoaded", () => AppAuth.init());
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      });
+    }
   </script>
 </body>
 
