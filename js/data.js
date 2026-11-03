@@ -505,6 +505,7 @@ const StorageManager = {
         target.activeSessionId = null;
         target.lastHeartbeat = null;
         target.isOnline = false;
+        target.forceLogoutAt = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
       }
     }
@@ -595,6 +596,22 @@ const AttendanceManager = {
     if (!user || !user.id || user.role === "ADMIN") return null;
     const data = StorageManager.get();
     if (!data.attendance) data.attendance = [];
+
+    // Ensure the user's active session state is preserved in localStorage when saving attendance
+    const activeSessId = sessionStorage.getItem("POS_ACTIVE_SESSION_ID") || localStorage.getItem("POS_ACTIVE_SESSION_ID");
+    if (Array.isArray(data.users)) {
+      const dbUser = data.users.find(u => u.id === user.id || (user.username && u.username === user.username));
+      if (dbUser && activeSessId) {
+        const now = Date.now();
+        const sessions = StorageManager.getActiveSessions(dbUser).filter(s => s.sessionId !== activeSessId);
+        sessions.push({ sessionId: activeSessId, lastHeartbeat: now, loginAt: new Date(now).toISOString() });
+        dbUser.activeSessions = sessions;
+        dbUser.activeSessionId = activeSessId;
+        dbUser.isOnline = true;
+        dbUser.lastHeartbeat = now;
+        dbUser.forceLogoutAt = null;
+      }
+    }
 
     const todayStr = this.getLocalDateString();
     const nowIso = new Date().toISOString();

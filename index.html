@@ -438,15 +438,31 @@
           localStorage.setItem("POS_ACTIVE_SESSION_ID", sessionId);
         }
 
+        // Immediately sync activeSessionId & activeSessions into localStorage cache so portals never see stale pre-login state
+        try {
+          const data = StorageManager.get();
+          if (Array.isArray(data.users)) {
+            const dbUser = data.users.find(u => u.id === user.id || (user.username && u.username === user.username));
+            if (dbUser && sessionId) {
+              const now = Date.now();
+              const sessions = StorageManager.getActiveSessions(dbUser).filter(s => s.sessionId !== sessionId);
+              sessions.push({ sessionId, lastHeartbeat: now, loginAt: new Date(now).toISOString() });
+              dbUser.activeSessions = sessions;
+              dbUser.activeSessionId = sessionId;
+              dbUser.isOnline = true;
+              dbUser.lastHeartbeat = now;
+              localStorage.setItem("CLEAN_POS_SYSTEM_DATA_V1", JSON.stringify(data));
+            }
+          }
+        } catch (e) {}
+
         if (typeof AttendanceManager !== "undefined" && user.role !== "ADMIN") {
-          if (typeof AttendanceManager.clockIn === "function") {
-            const rec = AttendanceManager.clockIn(user);
+          if (typeof AttendanceManager.recordTimeIn === "function") {
+            const rec = AttendanceManager.recordTimeIn(user);
             if (rec && rec.id) {
               sessionStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", rec.id);
               localStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", rec.id);
             }
-          } else if (typeof AttendanceManager.recordTimeIn === "function") {
-            AttendanceManager.recordTimeIn(user);
           }
         }
 

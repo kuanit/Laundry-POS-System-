@@ -847,26 +847,24 @@
           if (!this.currentUser || !this.currentUser.id || this._isLoggingOut) return;
           try {
             const res = await StorageManager.sendHeartbeat(this.currentUser.id, this.currentSessionId);
-            if (res && res.active === false) {
-              this.showTimeoutModal(null, res.reason || "Your device session was freed by the Administrator.", "Device Session Disconnected");
+            if (res && res.active === false && res.reason) {
+              const data = StorageManager.get();
+              const dbUser = (data.users || []).find(u => u.id === this.currentUser.id);
+              const maxDevices = StorageManager.getMaxDevices(dbUser || this.currentUser);
+              const sessTs = this.currentSessionId ? (parseInt(String(this.currentSessionId).split('-')[1], 10) || 0) : 0;
+              const wasForceLoggedOut = dbUser && dbUser.forceLogoutAt && (!sessTs || sessTs <= dbUser.forceLogoutAt);
+              if (res.reason.toLowerCase().includes("disabled") || wasForceLoggedOut || maxDevices === 1) {
+                this.showTimeoutModal(null, res.reason, "Device Session Disconnected");
+              }
             }
           } catch (e) {}
         };
         send();
-        this._heartbeatTimer = setInterval(send, 2000);
+        this._heartbeatTimer = setInterval(send, 4000);
       },
 
       setupUnloadBeacon() {
-        window.addEventListener("beforeunload", () => {
-          if (this.currentUser && this.currentUser.id && this.currentSessionId && !this._isLoggingOut) {
-            const apiUrl = (typeof getApiUrl === "function") ? getApiUrl("/api/auth/logout") : "/api/auth/logout";
-            const payload = JSON.stringify({ userId: this.currentUser.id, sessionId: this.currentSessionId });
-            const blob = new Blob([payload], { type: "application/json" });
-            if (navigator.sendBeacon) {
-              navigator.sendBeacon(apiUrl, blob);
-            }
-          }
-        });
+        // Page refresh or navigation should not log out the active session; heartbeats handle tab closure.
       },
 
       validateSessionState(freshData) {
@@ -964,21 +962,17 @@
           return;
         }
 
-        // 2. Check if this device session is still valid in the user's activeSessions list
+        // 2. Check if this device session was explicitly freed by Admin or superseded on a 1-device account
         if (this.currentSessionId) {
-          const activeSessions = StorageManager.getActiveSessions(dbUser);
           const maxDevices = StorageManager.getMaxDevices(dbUser);
-          if (Array.isArray(dbUser.activeSessions)) {
-            const isSessionPresent = activeSessions.some(s => s.sessionId === this.currentSessionId);
-            if (!isSessionPresent && dbUser.activeSessionId !== this.currentSessionId) {
-              this.showTimeoutModal(null, "Your device session has been freed by the Administrator or exceeded the device limit.", "Device Session Disconnected");
-              return;
-            }
-          } else if (maxDevices === 1) {
-            if (!dbUser.activeSessionId || dbUser.activeSessionId !== this.currentSessionId) {
-              this.showTimeoutModal(null, "Your device session has been freed by the Administrator or logged in on another device.", "Device Session Disconnected");
-              return;
-            }
+          const sessTs = parseInt(String(this.currentSessionId).split('-')[1], 10) || 0;
+          if (dbUser.forceLogoutAt && (!sessTs || sessTs <= dbUser.forceLogoutAt)) {
+            this.showTimeoutModal(null, "Your device session has been freed by the Administrator.", "Device Session Disconnected");
+            return;
+          }
+          if (maxDevices === 1 && dbUser.activeSessionId && dbUser.activeSessionId !== this.currentSessionId) {
+            this.showTimeoutModal(null, "Your account was logged in on another device (1-device limit).", "Device Session Disconnected");
+            return;
           }
         }
 

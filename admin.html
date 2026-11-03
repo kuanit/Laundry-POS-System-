@@ -1740,16 +1740,7 @@
       },
 
       setupUnloadBeacon() {
-        window.addEventListener("beforeunload", () => {
-          if (this.currentUser && this.currentUser.id && this.currentSessionId && !this._isLoggingOut) {
-            const apiUrl = (typeof getApiUrl === "function") ? getApiUrl("/api/auth/logout") : "/api/auth/logout";
-            const payload = JSON.stringify({ userId: this.currentUser.id, sessionId: this.currentSessionId });
-            const blob = new Blob([payload], { type: "application/json" });
-            if (navigator.sendBeacon) {
-              navigator.sendBeacon(apiUrl, blob);
-            }
-          }
-        });
+        // Page refresh or navigation should not log out the active session; heartbeats handle tab closure.
       },
 
       validateSessionState(freshData) {

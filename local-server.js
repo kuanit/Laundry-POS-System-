@@ -281,6 +281,9 @@ function saveServerData(data) {
           u.lastHeartbeat = prev.lastHeartbeat !== undefined ? prev.lastHeartbeat : null;
           u.isOnline = prev.isOnline !== undefined ? prev.isOnline : false;
           u.lastLoginAt = prev.lastLoginAt || u.lastLoginAt || null;
+          if (u.forceLogoutAt === undefined && prev.forceLogoutAt !== undefined) {
+            u.forceLogoutAt = prev.forceLogoutAt;
+          }
           if (u.maxDevices === undefined && prev.maxDevices !== undefined) {
             u.maxDevices = prev.maxDevices;
           }
@@ -992,6 +995,7 @@ const server = http.createServer(async (req, res) => {
         user.lastHeartbeat = now;
         user.isOnline = true;
         user.lastLoginAt = new Date().toISOString();
+        user.forceLogoutAt = null;
 
         saveServerData(dbData);
 
@@ -1048,18 +1052,28 @@ const server = http.createServer(async (req, res) => {
         const maxDevices = getUserMaxDevices(user); // 0 = Unlimited
 
         const matchedSession = sessionId ? activeSessions.find(s => s.sessionId === sessionId) : null;
+        const sessTs = sessionId ? (parseInt(String(sessionId).split('-')[1], 10) || 0) : 0;
 
-        if (maxDevices > 0) {
-          if (!matchedSession) {
+        if (!matchedSession) {
+          // Check if Admin explicitly freed this user's devices after this session was created
+          if (user.forceLogoutAt && (!sessTs || sessTs <= user.forceLogoutAt)) {
             return sendJson(res, 200, {
               success: true,
               active: false,
-              reason: 'Your device session has been disconnected by the Administrator or expired.'
+              reason: 'Your device session has been freed by the Administrator.'
+            });
+          }
+          // Check if all allowed device slots are already occupied by other active sessions
+          if (maxDevices > 0 && activeSessions.length >= maxDevices) {
+            return sendJson(res, 200, {
+              success: true,
+              active: false,
+              reason: 'Maximum device limit reached on another device.'
             });
           }
         }
 
-        // Refresh heartbeat for this session
+        // Refresh or register heartbeat for this session
         if (matchedSession) {
           matchedSession.lastHeartbeat = now;
         } else if (sessionId) {
@@ -1068,6 +1082,7 @@ const server = http.createServer(async (req, res) => {
             lastHeartbeat: now,
             loginAt: new Date().toISOString()
           });
+          user.activeSessionId = sessionId;
         }
         user.lastHeartbeat = now;
         user.isOnline = true;
@@ -1134,6 +1149,7 @@ const server = http.createServer(async (req, res) => {
           user.activeSessionId = null;
           user.lastHeartbeat = null;
           user.isOnline = false;
+          user.forceLogoutAt = Date.now();
         }
         saveServerData(dbData);
 
