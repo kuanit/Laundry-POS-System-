@@ -953,12 +953,47 @@ const AdminPanel = {
   previewImage(url) {
     const preview = document.getElementById("prod-img-preview");
     if (!preview) return;
-    if (url && url.startsWith("http")) {
-      preview.innerHTML = `<img src="${url}" alt="Preview" style="width:100%; height:100%; object-fit:cover; border-radius:6px;">`;
+    const clean = (url || "").trim();
+    if (clean && (clean.startsWith("http") || clean.startsWith("data:image") || clean.startsWith("blob:") || clean.startsWith("img/") || clean.startsWith("./") || clean.startsWith("/"))) {
+      const fallback = "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80";
+      preview.innerHTML = `<img src="${clean}" alt="Preview" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" onerror="this.src='${fallback}'">`;
     } else {
       preview.innerHTML = `<i data-lucide="image"></i>`;
       if (window.lucide) lucide.createIcons();
     }
+  },
+
+  handleProductPhotoFile(e) {
+    const file = e?.target?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 420;
+        let w = img.width;
+        let h = img.height;
+        if (w > h && w > maxDim) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else if (h >= w && h > maxDim) {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        const input = document.getElementById("prod-image-url");
+        if (input) input.value = dataUrl;
+        this.previewImage(dataUrl);
+        App.showToast("Product photo attached!", "success");
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
   },
 
   openAddSupplyModal() {
@@ -1186,7 +1221,11 @@ const AdminPanel = {
     StorageManager.save(data);
     this.closeProductModal();
     this.renderProductsTable();
+    this.renderInventoryTable();
     this.renderDashboard();
+    if (window.InventorySite && typeof window.InventorySite.refreshAll === "function") {
+      window.InventorySite.refreshAll();
+    }
     App.showToast(`Saved service/product: ${productPayload.name}`, "success");
   },
 
@@ -1202,7 +1241,11 @@ const AdminPanel = {
         data.products = data.products.filter(p => p.id !== id);
         StorageManager.save(data);
         this.renderProductsTable();
+        this.renderInventoryTable();
         this.renderDashboard();
+        if (window.InventorySite && typeof window.InventorySite.refreshAll === "function") {
+          window.InventorySite.refreshAll();
+        }
         App.showToast(`Deleted ${prod.name}`, "info");
       }
     );
@@ -1383,6 +1426,7 @@ const AdminPanel = {
       return;
     }
 
+    const fallbackSupplyImg = "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80";
     let html = "";
     items.forEach(p => {
       const isOut = p.stockQuantity <= 0;
@@ -1390,12 +1434,18 @@ const AdminPanel = {
       let statusBadge = `<span class="badge-pill badge-active">In Stock</span>`;
       if (isOut) statusBadge = `<span class="badge-pill badge-disabled">Out of Stock</span>`;
       else if (isLow) statusBadge = `<span class="badge-pill badge-warning">Low Stock</span>`;
+      const imgSrc = p.imageUrl || p.image || fallbackSupplyImg;
 
       html += `
         <tr>
           <td>
-            <b>${p.name}</b>
-            ${p.brand ? `<span class="badge-brand" style="font-size: 0.68rem; margin-left: 6px;">${p.brand}</span>` : ''}
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img src="${imgSrc}" alt="${p.name}" class="table-thumb" style="width:44px; height:44px; border-radius:10px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0;" onerror="this.src='${fallbackSupplyImg}'">
+              <div>
+                <b>${p.name}</b>
+                ${p.brand ? `<span class="badge-brand" style="font-size: 0.68rem; margin-left: 6px;">${p.brand}</span>` : ''}
+              </div>
+            </div>
           </td>
           <td><small class="text-muted">${p.sku || p.barcode || 'N/A'}</small></td>
           <td class="font-bold ${isLow || isOut ? 'text-danger' : ''}" style="cursor: pointer;" onclick="AdminPanel.openAdjustStockModal('${p.id}', 'SET')" title="Click to customize quantity">
@@ -1430,6 +1480,14 @@ const AdminPanel = {
     document.getElementById("adjust-prod-id").value = prod.id;
     document.getElementById("adjust-product-name").textContent = prod.name;
     document.getElementById("adjust-current-stock").textContent = prod.stockQuantity;
+    const adjImg = document.getElementById("adjust-product-image");
+    if (adjImg) {
+      adjImg.src = prod.imageUrl || prod.image || "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80";
+    }
+    const adjMeta = document.getElementById("adjust-product-meta");
+    if (adjMeta) {
+      adjMeta.textContent = `${prod.brand ? prod.brand + ' • ' : ''}SKU: ${prod.sku || prod.barcode || 'N/A'} • Unit: ${prod.unit || 'pc'}`;
+    }
     this.setAdjustType(defaultType);
     if (defaultType === "SET") {
       document.getElementById("adjust-qty").value = prod.stockQuantity;
@@ -1518,6 +1576,9 @@ const AdminPanel = {
     this.closeAdjustStockModal();
     this.renderInventoryTable();
     this.renderDashboard();
+    if (window.InventorySite && typeof window.InventorySite.refreshAll === "function") {
+      window.InventorySite.refreshAll();
+    }
     App.showToast(`Updated stock for ${prod.name} to ${newStock}`, "success");
   },
 
@@ -2188,6 +2249,8 @@ const AdminPanel = {
       }
       if (unit) item.unit = unit;
 
+      const actorName = (typeof App !== "undefined" && App.getCurrentUser()?.fullName) || (typeof AdminSite !== "undefined" && AdminSite?.currentUser?.fullName) || "Inventory Manager";
+      const nowIso = new Date().toISOString();
       data.inventoryLogs.unshift({
         id: "log-" + Date.now(),
         productId: item.id,
@@ -2198,8 +2261,9 @@ const AdminPanel = {
         newStock: item.stockQuantity,
         reason: `Manual Barcode Restock (${barcode})`,
         notes: brand ? `Brand: ${brand}` : "Manually typed quantity",
-        userName: AdminSite?.currentUser?.fullName || "Admin",
-        timestamp: new Date().toISOString()
+        userName: actorName,
+        createdAt: nowIso,
+        timestamp: nowIso
       });
     } else {
       // Create new supply product
@@ -2224,6 +2288,8 @@ const AdminPanel = {
       };
       data.products.push(newSupply);
 
+      const actorName = (typeof App !== "undefined" && App.getCurrentUser()?.fullName) || (typeof AdminSite !== "undefined" && AdminSite?.currentUser?.fullName) || "Inventory Manager";
+      const nowIso = new Date().toISOString();
       data.inventoryLogs.unshift({
         id: "log-" + Date.now(),
         productId: newSupply.id,
@@ -2234,8 +2300,9 @@ const AdminPanel = {
         newStock: qty,
         reason: `Barcode Initial Stock (${barcode})`,
         notes: brand ? `Detected Brand: ${brand}` : "Registered with manually entered quantity",
-        userName: AdminSite?.currentUser?.fullName || "Admin",
-        timestamp: new Date().toISOString()
+        userName: actorName,
+        createdAt: nowIso,
+        timestamp: nowIso
       });
     }
 
@@ -2246,6 +2313,9 @@ const AdminPanel = {
 
     // Update the Supplies Inventory table immediately
     this.renderInventoryTable();
+    if (window.InventorySite && typeof window.InventorySite.refreshAll === "function") {
+      window.InventorySite.refreshAll();
+    }
 
     // Briefly highlight the row in the table
     setTimeout(() => {

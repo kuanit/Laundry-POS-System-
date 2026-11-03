@@ -998,13 +998,23 @@
           </div>
 
           <div class="form-group">
-            <label for="prod-image-url">Image URL</label>
-            <div class="input-with-preview">
-              <input type="text" id="prod-image-url" placeholder="https://images.unsplash.com/... or paste image URL"
-                oninput="AdminPanel.previewImage(this.value)">
-              <div class="image-preview-thumb" id="prod-img-preview">
+            <label for="prod-image-url">Product / Supply Photo (URL or Upload)</label>
+            <div class="input-with-preview" style="display:flex; align-items:center; gap:8px;">
+              <input type="text" id="prod-image-url" placeholder="https://images.unsplash.com/... or upload photo"
+                oninput="AdminPanel.previewImage(this.value)" style="flex:1;">
+              <input type="file" id="prod-photo-file" accept="image/*" style="display:none;" onchange="AdminPanel.handleProductPhotoFile(event)">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('prod-photo-file').click()" title="Upload or take a photo">
+                <i data-lucide="upload"></i> Photo
+              </button>
+              <div class="image-preview-thumb" id="prod-img-preview" style="width:46px; height:46px; flex-shrink:0;">
                 <i data-lucide="image"></i>
               </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
+              <button type="button" class="btn btn-secondary btn-xs" onclick="AdminPanel.setPresetImage('powder_detergent')">🧺 Powder Detergent</button>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="AdminPanel.setPresetImage('liquid_detergent')">🫧 Liquid Detergent</button>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="AdminPanel.setPresetImage('fabcon')">🌸 Fabric Conditioner</button>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="AdminPanel.setPresetImage('bleach')">✨ Bleach / Booster</button>
             </div>
           </div>
 
@@ -1045,7 +1055,13 @@
 
         <div class="modal-body">
           <div class="adjust-product-summary">
-            <h4 id="adjust-product-name">Supply Item</h4>
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+              <img id="adjust-product-image" src="https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80" alt="Supply Photo" style="width:58px; height:58px; border-radius:12px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0;" onerror="this.src='https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80'">
+              <div style="text-align:left;">
+                <h4 id="adjust-product-name" style="margin:0 0 2px;">Supply Item</h4>
+                <small id="adjust-product-meta" class="text-muted">SKU • Unit</small>
+              </div>
+            </div>
             <div class="stock-comparison-box">
               <div class="comp-col">
                 <span class="label">Current Stock</span>

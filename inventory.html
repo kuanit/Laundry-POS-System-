@@ -37,7 +37,7 @@
   <script src="https://unpkg.com/@zxing/library@latest"></script>
 
   <!-- Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=3.4">
+  <link rel="stylesheet" href="css/styles.css?v=3.5">
   <style>
     .inv-portal-wrapper {
       display: flex;
@@ -49,8 +49,8 @@
 
     .inv-portal-body {
       flex: 1;
-      padding: 24px 28px 48px;
-      max-width: 1480px;
+      padding: 22px 26px 52px;
+      max-width: 1520px;
       width: 100%;
       margin: 0 auto;
       display: flex;
@@ -66,7 +66,7 @@
       gap: 16px;
       padding: 18px 22px;
       border-radius: 16px;
-      background: linear-gradient(135deg, rgba(2, 132, 199, 0.14), rgba(14, 165, 233, 0.05));
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.14), rgba(6, 182, 212, 0.05));
       border: 1px solid rgba(56, 189, 248, 0.25);
     }
 
@@ -77,9 +77,9 @@
     }
 
     .inv-role-icon-box {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
       background: rgba(56, 189, 248, 0.16);
       border: 1px solid rgba(56, 189, 248, 0.35);
       color: #38bdf8;
@@ -95,13 +95,24 @@
       gap: 16px;
     }
 
+    .inv-kpi-card-clickable {
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .inv-kpi-card-clickable:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.16);
+    }
+
     .inv-view-tabs {
       display: inline-flex;
       gap: 6px;
       background: var(--bg-surface);
       padding: 5px;
       border-radius: 12px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-color);
     }
 
     .inv-view-tab {
@@ -130,12 +141,278 @@
       box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
     }
 
+    /* Visual Supply Cards Grid */
+    .inv-supplies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px;
+    }
+
+    .inv-supply-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+      position: relative;
+    }
+
+    .inv-supply-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(56, 189, 248, 0.45);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
+    }
+
+    .inv-supply-card.is-low-stock {
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+
+    .inv-supply-card.is-out-stock {
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .inv-card-img-wrap {
+      position: relative;
+      height: 175px;
+      width: 100%;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+      overflow: hidden;
+      cursor: zoom-in;
+    }
+
+    .inv-card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.35s ease;
+    }
+
+    .inv-supply-card:hover .inv-card-img-wrap img {
+      transform: scale(1.05);
+    }
+
+    .inv-card-top-badges {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .inv-card-zoom-hint {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(6px);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.88;
+    }
+
+    .inv-card-photo-btn {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(6px);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 8px;
+      padding: 4px 9px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .inv-card-photo-btn:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .inv-card-body {
+      padding: 15px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      flex: 1;
+    }
+
+    .inv-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.3;
+      color: var(--text-primary);
+    }
+
+    .inv-card-submeta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    /* Visual Stock Meter Box */
+    .inv-stock-meter-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .inv-stock-meter-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .inv-stock-big-num {
+      font-size: 1.35rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .inv-stock-bar-track {
+      width: 100%;
+      height: 7px;
+      background: rgba(148, 163, 184, 0.16);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .inv-stock-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+
+    /* Quick 1-Tap Stepper Row */
+    .inv-quick-stepper {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .inv-step-btn {
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: 1px solid var(--border-color);
+      background: var(--bg-app);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .inv-step-btn.minus:hover {
+      background: rgba(245, 158, 11, 0.16);
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .inv-step-btn.plus:hover {
+      background: rgba(16, 185, 129, 0.16);
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .inv-card-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 4px;
+    }
+
+    /* Preset Photo Thumbnails in Add/Edit Modal */
+    .supply-photo-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .supply-photo-preset-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-align: left;
+    }
+
+    .supply-photo-preset-btn:hover {
+      border-color: var(--primary);
+      background: rgba(2, 132, 199, 0.1);
+    }
+
+    .supply-photo-preset-btn img {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    /* Table Thumbnail Hover Zoom */
+    .inv-table-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid var(--border-color);
+      cursor: zoom-in;
+      transition: transform 0.18s ease, border-color 0.18s ease;
+      flex-shrink: 0;
+    }
+
+    .inv-table-thumb:hover {
+      transform: scale(1.1);
+      border-color: var(--primary);
+    }
+
     @media (max-width: 768px) {
       .inv-portal-body {
         padding: 14px 12px 36px;
       }
       .inv-role-banner {
         padding: 14px 16px;
+      }
+      .supply-photo-presets {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
   </style>
@@ -153,7 +430,7 @@
         </div>
         <div class="brand-info">
           <h2 class="store-name">Dirty Clothes</h2>
-          <span class="pos-terminal-tag" style="color:#38bdf8; font-weight:700;">Inventory Manager Portal</span>
+          <span class="pos-terminal-tag" style="color:#06b6d4; font-weight:700;">Inventory Manager Portal</span>
         </div>
         <div class="live-clock" id="inv-clock">00:00:00 AM</div>
       </div>
@@ -215,39 +492,39 @@
       <div class="inv-role-banner">
         <div class="inv-role-banner-left">
           <div class="inv-role-icon-box">
-            <i data-lucide="warehouse" style="width:24px; height:24px;"></i>
+            <i data-lucide="warehouse" style="width:26px; height:26px;"></i>
           </div>
           <div>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <h2 style="margin:0; font-size:1.2rem; font-weight:800;">Supplies & Stock Control Center</h2>
-              <span class="role-badge inventory_manager inventory-manager">INVENTORY MANAGER EXCLUSIVE</span>
+              <h2 style="margin:0; font-size:1.22rem; font-weight:800;">Supplies & Stock Visual Control Center</h2>
+              <span class="role-badge inventory_manager inventory-manager">INVENTORY MANAGER</span>
             </div>
             <p class="text-muted" style="margin:4px 0 0; font-size:0.84rem;">
-              Monitor detergent, fabric conditioner, bleach, laundry bags, and shop consumables. Scan barcodes to restock or deduct items with full audit logging.
+              Visual inventory for detergents, fabric conditioners, bleach, and shop consumables. Tap any photo to inspect, use 1-tap buttons to restock/deduct, or scan barcodes.
             </p>
           </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-secondary" onclick="AdminPanel.openBarcodeDetectorModal()" style="border-color:var(--primary); color:var(--primary);">
-            <i data-lucide="scan-barcode"></i> Scan Item Barcode
+          <button type="button" class="btn btn-primary" onclick="AdminPanel.openBarcodeDetectorModal()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-color: #6366f1;">
+            <i data-lucide="scan-barcode"></i> Scan Barcode
           </button>
           <button type="button" class="btn btn-primary" onclick="InventorySite.openAddSupplyModal()">
-            <i data-lucide="plus"></i> Add Supply / Detergent
+            <i data-lucide="package-plus"></i> Add Supply / Detergent
           </button>
         </div>
       </div>
 
-      <!-- KPI Summary Cards -->
+      <!-- Clickable KPI Summary Cards (Click to Filter) -->
       <div class="inv-kpi-grid">
-        <div class="kpi-card">
+        <div class="kpi-card inv-kpi-card-clickable" onclick="InventorySite.setFilterStatus('ALL')" title="Click to view all supplies">
           <div class="kpi-icon blue"><i data-lucide="package"></i></div>
           <div class="kpi-info">
             <span class="kpi-label">Total Supply Items</span>
             <h3 class="kpi-value" id="inv-kpi-total-items">0</h3>
-            <span class="kpi-subtext">Registered physical supplies</span>
+            <span class="kpi-subtext">Click to show all supplies</span>
           </div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card inv-kpi-card-clickable" onclick="InventorySite.setFilterStatus('HEALTHY')" title="Click to view healthy in-stock supplies">
           <div class="kpi-icon green"><i data-lucide="layers"></i></div>
           <div class="kpi-info">
             <span class="kpi-label">Total Units in Stock</span>
@@ -255,82 +532,101 @@
             <span class="kpi-subtext">Combined stock count</span>
           </div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card inv-kpi-card-clickable" onclick="InventorySite.setFilterStatus('LOW')" title="Click to filter low stock items">
           <div class="kpi-icon orange"><i data-lucide="alert-triangle"></i></div>
           <div class="kpi-info">
             <span class="kpi-label">Low Stock Alerts</span>
             <h3 class="kpi-value" id="inv-kpi-low-stock">0</h3>
-            <span class="kpi-subtext">At or below alert threshold</span>
+            <span class="kpi-subtext">Tap to filter low stock</span>
           </div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card inv-kpi-card-clickable" onclick="InventorySite.setFilterStatus('OUT')" title="Click to filter out-of-stock items">
           <div class="kpi-icon purple" style="background:rgba(239, 68, 68, 0.14); color:#ef4444;"><i data-lucide="package-x"></i></div>
           <div class="kpi-info">
             <span class="kpi-label">Out of Stock</span>
             <h3 class="kpi-value" id="inv-kpi-out-stock">0</h3>
-            <span class="kpi-subtext">Requires immediate restocking</span>
+            <span class="kpi-subtext">Tap to filter out-of-stock</span>
           </div>
         </div>
       </div>
 
       <!-- Low Stock Warning Banner -->
-      <div id="low-stock-alert-banner" class="alert-banner warning" style="display:none;">
-        <i data-lucide="alert-triangle"></i>
+      <div class="alert-banner warning-banner" id="inventory-low-stock-banner" style="display:none;">
         <div class="alert-content">
-          <strong>Low Supplies Alert!</strong>
-          <span id="low-stock-alert-text">Some detergents or supplies are running low.</span>
+          <i data-lucide="alert-octagon"></i>
+          <div>
+            <h4 id="inventory-alert-title">Low Supplies Alert</h4>
+            <p id="low-stock-alert-text">Some laundry supplies have reached their minimum stock threshold.</p>
+          </div>
         </div>
+        <button type="button" class="btn btn-sm btn-dark" onclick="InventorySite.setFilterStatus('LOW')">
+          Show Low Stock Only
+        </button>
       </div>
 
-      <!-- SECTION 1: SUPPLIES & STOCK TABLE -->
+      <!-- SECTION 1: SUPPLIES & STOCK (VISUAL CARDS + TABLE) -->
       <div id="inv-section-stock">
-        <div class="tab-toolbar" style="margin-bottom:16px;">
-          <div class="toolbar-left" style="display:flex; gap:10px; flex-wrap:wrap; flex:1;">
-            <div class="search-box" style="min-width:260px; flex:1; max-width:420px;">
-              <i data-lucide="search"></i>
-              <input type="text" id="inv-search-input" placeholder="Search supply name, brand, SKU, or barcode..."
-                oninput="InventorySite.renderSuppliesTable()">
+        <div class="section-toolbar" style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div class="toolbar-left" style="display:flex; gap:10px; flex-wrap:wrap; flex:1; align-items:center;">
+            <div class="search-box-wrapper mini" style="min-width:250px; flex:1; max-width:380px;">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="inv-search-input" placeholder="Search supply name, brand, or barcode..."
+                oninput="InventorySite.renderSupplies()">
             </div>
-            <select id="inv-stock-filter" class="select-input" onchange="InventorySite.renderSuppliesTable()">
-              <option value="ALL">All Supplies</option>
-              <option value="LOW">Low Stock Only</option>
-              <option value="OUT">Out of Stock Only</option>
-              <option value="HEALTHY">In Stock (Healthy)</option>
-            </select>
+
+            <div class="btn-group">
+              <button type="button" class="btn btn-secondary active" id="inv-filter-btn-ALL" onclick="InventorySite.setFilterStatus('ALL')">All Supplies</button>
+              <button type="button" class="btn btn-secondary" id="inv-filter-btn-LOW" onclick="InventorySite.setFilterStatus('LOW')">Low Stock</button>
+              <button type="button" class="btn btn-secondary" id="inv-filter-btn-OUT" onclick="InventorySite.setFilterStatus('OUT')">Out of Stock</button>
+              <button type="button" class="btn btn-secondary" id="inv-filter-btn-HEALTHY" onclick="InventorySite.setFilterStatus('HEALTHY')">Healthy</button>
+            </div>
           </div>
-          <div class="toolbar-right" style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-secondary" onclick="AdminPanel.exportInventoryCSV()">
-              <i data-lucide="download"></i> Export Stock CSV
+
+          <div class="toolbar-right" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <!-- View Mode Toggle: Visual Cards vs Table -->
+            <div class="btn-group" title="Switch between Visual Photo Cards and Table View">
+              <button type="button" class="btn btn-secondary active" id="btn-inv-layout-grid" onclick="InventorySite.setLayoutMode('grid')">
+                <i data-lucide="layout-grid"></i> Photo Cards
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-inv-layout-table" onclick="InventorySite.setLayoutMode('table')">
+                <i data-lucide="list"></i> Table View
+              </button>
+            </div>
+
+            <button type="button" class="btn btn-secondary" onclick="InventorySite.exportSuppliesCSV()">
+              <i data-lucide="download"></i> Export CSV
             </button>
             <button type="button" class="btn btn-secondary" onclick="AdminPanel.openInventoryLogsModal()">
-              <i data-lucide="history"></i> Quick Logs Modal
+              <i data-lucide="clipboard-list"></i> Audit Log Popup
             </button>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <h4 style="margin:0; display:flex; align-items:center; gap:8px;">
-              <i data-lucide="boxes" style="width:18px; height:18px; color:var(--primary);"></i>
-              <span>Physical Laundry Supplies & Consumables</span>
-            </h4>
-            <span class="text-muted" id="inv-table-count-label" style="font-size:0.82rem;">Showing 0 items</span>
-          </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <span class="text-muted" id="inv-table-count-label" style="font-size:0.84rem; font-weight:600;">Showing 0 supply items</span>
+          <small class="text-muted" style="font-size:0.78rem;"><i data-lucide="sparkles" style="width:13px; height:13px; vertical-align:middle; color:var(--primary);"></i> Tip: Click any supply photo to view full image, or use <b>-1</b> / <b>+1</b> / <b>+10</b> for instant stock updates.</small>
+        </div>
+
+        <!-- 1A. VISUAL PHOTO CARDS GRID (DEFAULT) -->
+        <div id="inv-supplies-cards-grid" class="inv-supplies-grid"></div>
+
+        <!-- 1B. TABLE VIEW WITH PHOTO THUMBNAILS -->
+        <div id="inv-supplies-table-wrap" class="panel-body card-container" style="display:none;">
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Supply Item</th>
-                  <th>Brand</th>
+                  <th style="width:64px;">Photo</th>
+                  <th>Supply Item & Brand</th>
                   <th>SKU / Barcode</th>
-                  <th>Unit Price</th>
+                  <th>Cost / Unit</th>
                   <th>Current Stock</th>
-                  <th>Alert Threshold</th>
+                  <th>Min Threshold</th>
                   <th>Status</th>
                   <th class="text-right">Stock Actions</th>
                 </tr>
               </thead>
-              <tbody id="admin-inventory-tbody"></tbody>
+              <tbody id="admin-inventory-table-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -338,23 +634,23 @@
 
       <!-- SECTION 2: FULL AUDIT HISTORY -->
       <div id="inv-section-logs" style="display:none;">
-        <div class="tab-toolbar" style="margin-bottom:16px;">
+        <div class="section-toolbar" style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <div class="toolbar-left" style="display:flex; gap:10px; flex-wrap:wrap; flex:1;">
-            <div class="search-box" style="min-width:260px; flex:1; max-width:420px;">
-              <i data-lucide="search"></i>
+            <div class="search-box-wrapper mini" style="min-width:260px; flex:1; max-width:420px;">
+              <i data-lucide="search" class="search-icon"></i>
               <input type="text" id="inv-log-search" placeholder="Search logs by item name, reason, or staff..."
                 oninput="InventorySite.renderInlineLogs()">
             </div>
           </div>
           <div class="toolbar-right">
-            <button type="button" class="btn btn-secondary" onclick="AdminPanel.exportInventoryLogsCSV()">
+            <button type="button" class="btn btn-secondary" onclick="InventorySite.exportLogsCSV()">
               <i data-lucide="download"></i> Export Audit Logs CSV
             </button>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="panel-body card-container">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border-color);">
             <h4 style="margin:0; display:flex; align-items:center; gap:8px;">
               <i data-lucide="clipboard-list" style="width:18px; height:18px; color:var(--primary);"></i>
               <span>Supplies Stock Movement & Audit History</span>
@@ -367,10 +663,10 @@
                 <tr>
                   <th>Date & Time</th>
                   <th>Supply Item</th>
+                  <th>Type</th>
                   <th>Change</th>
-                  <th>Previous</th>
-                  <th>New Stock</th>
-                  <th>Reason</th>
+                  <th>Prev &rarr; New</th>
+                  <th>Reason & Notes</th>
                   <th>Logged By</th>
                 </tr>
               </thead>
@@ -384,97 +680,188 @@
 
   <!-- ==================== MODALS ==================== -->
 
-  <!-- Add / Edit Supply Modal -->
-  <div id="modal-product-form" class="modal-overlay">
-    <div class="modal-card">
+  <!-- PHOTO LIGHTBOX PREVIEW MODAL -->
+  <div id="modal-image-lightbox" class="modal-backdrop" onclick="if(event.target===this) InventorySite.closeImagePreview()">
+    <div class="modal-dialog" style="max-width:480px; text-align:center;">
       <div class="modal-header">
-        <h3 id="product-modal-title"><i data-lucide="package-plus"></i> Add Laundry Supply</h3>
-        <button type="button" class="icon-btn" onclick="AdminPanel.closeProductModal()">
+        <div class="modal-title">
+          <i data-lucide="image"></i>
+          <h3 id="lightbox-title">Supply Photo</h3>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="InventorySite.closeImagePreview()">
           <i data-lucide="x"></i>
         </button>
       </div>
-      <form id="product-form" onsubmit="InventorySite.saveSupplyItem(event)">
+      <div class="modal-body" style="padding:18px;">
+        <div style="width:100%; height:290px; border-radius:14px; overflow:hidden; background:#0f172a; border:1px solid var(--border-color); margin-bottom:14px;">
+          <img id="lightbox-img" src="" alt="Supply Preview" style="width:100%; height:100%; object-fit:contain;">
+        </div>
+        <div id="lightbox-meta" style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:4px;"></div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button type="button" class="btn btn-secondary" id="lightbox-edit-btn">
+          <i data-lucide="camera"></i> Change Photo / Edit
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-primary" id="lightbox-adjust-btn">
+            <i data-lucide="sliders"></i> Adjust Stock
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="InventorySite.closeImagePreview()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUCT / SUPPLY MODAL (Matches AdminPanel DOM IDs) -->
+  <div id="modal-product-form" class="modal-backdrop">
+    <div class="modal-dialog modal-form-dialog">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="package-plus"></i>
+          <h3 id="product-modal-title">Add Supply / Detergent</h3>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="AdminPanel.closeProductModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="product-form" onsubmit="AdminPanel.saveProduct(event)">
+        <input type="hidden" id="prod-id">
+
         <div class="modal-body">
-          <input type="hidden" id="prod-id">
-          <div class="form-grid">
-            <div class="form-group span-2">
-              <label>Supply Name *</label>
-              <input type="text" id="prod-name" class="form-input" placeholder="e.g., Ariel Liquid Detergent 1L" required>
+          <div class="form-row">
+            <div class="form-group col-8">
+              <label for="prod-name">Supply / Detergent Name *</label>
+              <input type="text" id="prod-name" placeholder="e.g. Breeze Power Machine Liquid Detergent" required>
             </div>
-            <div class="form-group">
-              <label>Category *</label>
-              <select id="prod-category" class="select-input" required></select>
+            <div class="form-group col-4">
+              <label for="prod-brand">Brand Name</label>
+              <input type="text" id="prod-brand" placeholder="e.g. Breeze, Ariel, Tide">
             </div>
-            <div class="form-group">
-              <label>Brand / Variant</label>
-              <input type="text" id="prod-brand" class="form-input" placeholder="e.g., Downy / Ariel / Breeze">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-4">
+              <label for="prod-sku">SKU / Supply Code</label>
+              <input type="text" id="prod-sku" placeholder="e.g. BAR-113034">
             </div>
-            <div class="form-group">
-              <label>Unit Price (₱) *</label>
-              <input type="number" id="prod-price" class="form-input" step="0.01" min="0" placeholder="0.00" required>
-            </div>
-            <div class="form-group">
-              <label>SKU / Barcode *</label>
-              <div style="display:flex; gap:6px;">
-                <input type="text" id="prod-sku" class="form-input" placeholder="e.g., DET-101" required style="flex:1;">
-                <button type="button" class="btn btn-secondary" onclick="AdminPanel.openProductSkuScanner()" title="Scan Barcode with Camera" style="padding:0 12px;">
-                  <i data-lucide="camera"></i> Scan
-                </button>
-              </div>
-              <div id="prod-sku-scanner-wrap" style="display:none; margin-top:8px; border-radius:10px; overflow:hidden; border:2px solid var(--primary); background:#000; position:relative;">
-                <div id="prod-sku-reader" style="width:100%; min-height:200px;"></div>
-                <button type="button" class="btn btn-danger btn-sm" onclick="AdminPanel.closeProductSkuScanner()" style="position:absolute; top:8px; right:8px; z-index:10;">
-                  <i data-lucide="x"></i> Close Camera
-                </button>
-              </div>
-            </div>
-            <div class="form-group" style="display:none;">
-              <label>Item Type</label>
-              <select id="prod-is-service" class="select-input">
-                <option value="false" selected>Physical Supply (Track Stock)</option>
-                <option value="true">Laundry Service (No Stock)</option>
+            <div class="form-group col-4">
+              <label for="prod-category">Category *</label>
+              <select id="prod-category" required>
+                <!-- Populated dynamically -->
               </select>
             </div>
-            <div class="form-group" id="prod-stock-group">
-              <label>Initial / Current Stock</label>
-              <input type="number" id="prod-stock" class="form-input" min="0" value="20">
+            <div class="form-group col-4">
+              <label for="prod-unit">Dispense / Stock Unit *</label>
+              <select id="prod-unit" required>
+                <option value="sachet">Per Sachet</option>
+                <option value="scoop">Per Scoop</option>
+                <option value="bottle">Per Bottle</option>
+                <option value="pc">Per Piece (pc)</option>
+                <option value="kg">Per Kilo (kg)</option>
+                <option value="load">Per Load / Token</option>
+                <option value="set">Per Set (set)</option>
+                <option value="pair">Per Pair (pair)</option>
+              </select>
             </div>
-            <div class="form-group" id="prod-threshold-group">
-              <label>Low Stock Alert Threshold</label>
-              <input type="number" id="prod-threshold" class="form-input" min="1" value="10">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="prod-cost">Unit Cost (₱) *</label>
+              <input type="number" id="prod-cost" min="0" step="any" placeholder="15.00" required>
+              <input type="hidden" id="prod-price">
             </div>
-            <div class="form-group">
-              <label>Theme Color</label>
-              <input type="color" id="prod-color" class="form-input color-input" value="#0284c7">
-            </div>
-            <div class="form-group span-2">
-              <label>Supply Image (Optional)</label>
-              <div class="image-upload-wrapper">
-                <div id="prod-image-preview" class="image-preview-box">
-                  <i data-lucide="image"></i>
-                  <span>No Image</span>
-                </div>
-                <div class="image-upload-controls">
-                  <input type="file" id="prod-image-input" accept="image/*" style="display:none"
-                    onchange="AdminPanel.handleImageUpload(event)">
-                  <input type="hidden" id="prod-image-data">
-                  <button type="button" class="btn btn-secondary btn-sm"
-                    onclick="document.getElementById('prod-image-input').click()">
-                    <i data-lucide="upload"></i> Choose Photo
-                  </button>
-                  <button type="button" class="btn btn-danger btn-sm" id="btn-remove-image" style="display:none"
-                    onclick="AdminPanel.removeProductImage()">
-                    <i data-lucide="trash-2"></i> Remove
-                  </button>
-                  <small class="text-muted">Auto-compressed for fast loading (Max 300px)</small>
-                </div>
+            <div class="form-group col-6" id="prod-barcode-wrap">
+              <label for="prod-barcode">Barcode / Scan Code</label>
+              <div class="input-with-button">
+                <input type="text" id="prod-barcode" placeholder="e.g. 8934868113034" onchange="AdminPanel.autoFillFromBarcode(this.value)">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.autoFillFromBarcode(document.getElementById('prod-barcode').value)" title="Auto-detect brand & photo from barcode">
+                  <i data-lucide="sparkles"></i> Auto-Detect
+                </button>
               </div>
             </div>
           </div>
+
+          <!-- Always Physical Supply on Inventory Manager Portal -->
+          <div class="form-row" style="display:none;">
+            <div class="form-group col-12">
+              <select id="prod-is-service" onchange="AdminPanel.toggleProductStockInputs()">
+                <option value="false" selected>Physical Supply / Retail Product (Stock Tracked)</option>
+                <option value="true">Laundry Service (Unlimited Capacity)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row" id="prod-stock-inputs-row">
+            <div class="form-group col-6">
+              <label for="prod-stock">Current Stock Quantity</label>
+              <input type="number" id="prod-stock" min="0" step="any" value="100">
+            </div>
+            <div class="form-group col-6">
+              <label for="prod-threshold">Low Stock Alert Threshold</label>
+              <input type="number" id="prod-threshold" min="0" step="any" value="10">
+            </div>
+          </div>
+
+          <!-- User-Friendly Photo Picker & Visual Presets -->
+          <div class="form-group">
+            <label for="prod-image-url">Supply Photo (Upload Photo, Take Camera Shot, or Choose Preset)</label>
+            <div class="input-with-preview" style="display:flex; align-items:center; gap:10px;">
+              <div class="image-preview-thumb" id="prod-img-preview" style="width:64px; height:64px; border-radius:12px; flex-shrink:0; border:2px solid var(--primary);">
+                <i data-lucide="image"></i>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; gap:6px;">
+                  <input type="text" id="prod-image-url" placeholder="Paste image URL or click Upload Photo..."
+                    oninput="AdminPanel.previewImage(this.value)" style="flex:1;">
+                  <input type="file" id="prod-photo-file" accept="image/*" style="display:none;" onchange="AdminPanel.handleProductPhotoFile(event)">
+                  <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('prod-photo-file').click()" title="Upload or take photo from device">
+                    <i data-lucide="camera"></i> Upload Photo
+                  </button>
+                </div>
+                <small class="text-muted" style="font-size:0.74rem;">Or click a quick preset photo below:</small>
+              </div>
+            </div>
+
+            <div class="supply-photo-presets">
+              <button type="button" class="supply-photo-preset-btn" onclick="AdminPanel.setPresetImage('powder_detergent')">
+                <img src="https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=200&q=80" alt="Powder">
+                <span>Powder Detergent</span>
+              </button>
+              <button type="button" class="supply-photo-preset-btn" onclick="AdminPanel.setPresetImage('liquid_detergent')">
+                <img src="https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=200&q=80" alt="Liquid">
+                <span>Liquid Detergent</span>
+              </button>
+              <button type="button" class="supply-photo-preset-btn" onclick="AdminPanel.setPresetImage('fabcon')">
+                <img src="https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=200&q=80" alt="Fabcon">
+                <span>Fabric Conditioner</span>
+              </button>
+              <button type="button" class="supply-photo-preset-btn" onclick="AdminPanel.setPresetImage('bleach')">
+                <img src="https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=200&q=80" alt="Bleach">
+                <span>Bleach / Booster</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prod-description">Supply Description / Notes</label>
+            <textarea id="prod-description" rows="2"
+              placeholder="e.g. Commercial laundry detergent sachets or bulk bottle..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="prod-status">Supply Status</label>
+            <select id="prod-status">
+              <option value="active">Active (Available in Shop)</option>
+              <option value="inactive">Inactive / Archived</option>
+            </select>
+          </div>
         </div>
+
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeProductModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary" id="btn-save-product">
             <i data-lucide="save"></i> Save Supply Item
           </button>
         </div>
@@ -482,175 +869,320 @@
     </div>
   </div>
 
-  <!-- Adjust Inventory Stock Modal -->
-  <div id="modal-inventory-adjust" class="modal-overlay">
-    <div class="modal-card modal-sm">
+  <!-- STOCK ADJUSTMENT MODAL (Matches AdminPanel DOM IDs) -->
+  <div id="modal-inventory-adjust" class="modal-backdrop">
+    <div class="modal-dialog modal-adjust-dialog">
       <div class="modal-header">
-        <h3><i data-lucide="package-plus"></i> Adjust Supply Stock</h3>
-        <button type="button" class="icon-btn" onclick="AdminPanel.closeAdjustModal()">
+        <div class="modal-title">
+          <i data-lucide="boxes"></i>
+          <h3>Adjust Laundry Supplies Stock</h3>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="AdminPanel.closeAdjustStockModal()">
           <i data-lucide="x"></i>
         </button>
       </div>
-      <form id="inventory-adjust-form" onsubmit="InventorySite.submitStockAdjustment(event)">
+
+      <form id="inventory-adjust-form" onsubmit="AdminPanel.saveStockAdjustment(event)">
+        <input type="hidden" id="adjust-prod-id">
+
         <div class="modal-body">
-          <input type="hidden" id="adj-prod-id">
-          <h4 id="adj-prod-name" class="mb-2">Supply Name</h4>
-          <p class="text-muted mb-3">Current Stock: <strong id="adj-current-stock">0</strong></p>
+          <div class="adjust-product-summary">
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+              <img id="adjust-product-image" src="https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80" alt="Supply Photo" style="width:64px; height:64px; border-radius:14px; object-fit:cover; border:2px solid var(--primary); flex-shrink:0;" onerror="this.src='https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80'">
+              <div style="text-align:left;">
+                <h4 id="adjust-product-name" style="margin:0 0 3px;">Supply Item</h4>
+                <small id="adjust-product-meta" class="text-muted">SKU • Unit</small>
+              </div>
+            </div>
+            <div class="stock-comparison-box">
+              <div class="comp-col">
+                <span class="label">Current Stock</span>
+                <span class="val" id="adjust-current-stock">0</span>
+              </div>
+              <div class="comp-arrow">&rarr;</div>
+              <div class="comp-col">
+                <span class="label">New Calculated Stock</span>
+                <span class="val text-success" id="adjust-new-stock">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label>Adjustment Type</label>
+            <div class="adjust-type-tabs">
+              <button type="button" class="adjust-tab active" id="btn-adjust-add"
+                onclick="AdminPanel.setAdjustType('ADD')">
+                <i data-lucide="plus"></i> Add (+)
+              </button>
+              <button type="button" class="adjust-tab" id="btn-adjust-sub"
+                onclick="AdminPanel.setAdjustType('SUB')">
+                <i data-lucide="minus"></i> Subtract (-)
+              </button>
+              <button type="button" class="adjust-tab" id="btn-adjust-set"
+                onclick="AdminPanel.setAdjustType('SET')">
+                <i data-lucide="hash"></i> Exact Count (=)
+              </button>
+            </div>
+
+            <label class="mt-2" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Quantity & Quick Presets</label>
+            <div class="adjust-qty-row">
+              <div class="adjust-qty-input-wrap">
+                <input type="number" id="adjust-qty" min="0" step="any" value="10" oninput="AdminPanel.recalcNewStock()"
+                  placeholder="Qty" required>
+              </div>
+              <div class="quick-stock-chips">
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(10)">+10</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(25)">+25</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(50)">+50</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickAdjustQty(100)">+100</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickSetExact(50)">Set 50</button>
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.quickSetExact(100)">Set 100</button>
+              </div>
+            </div>
+          </div>
 
           <div class="form-group">
-            <label>Adjustment Type</label>
-            <select id="adj-type" class="select-input">
-              <option value="add">Restock (+ Add Supplies)</option>
-              <option value="deduct">Deduct (- Used / Damaged)</option>
-              <option value="set">Set Exact Stock Count (=)</option>
+            <label for="adjust-reason">Reason for Adjustment *</label>
+            <select id="adjust-reason" required>
+              <option value="Restock">Restock (Received shipment)</option>
+              <option value="Used in Wash">Used in Wash Batch</option>
+              <option value="Damaged">Damaged / Spillage</option>
+              <option value="Correction">Audit Correction</option>
+              <option value="Other">Other</option>
             </select>
           </div>
+
           <div class="form-group">
-            <label>Quantity *</label>
-            <input type="number" id="adj-qty" class="form-input" min="1" value="1" required>
-          </div>
-          <div class="form-group">
-            <label>Reason / Note</label>
-            <input type="text" id="adj-reason" class="form-input" placeholder="e.g., Weekly detergent delivery" required>
+            <label for="adjust-notes">Notes / Batch No.</label>
+            <input type="text" id="adjust-notes" placeholder="e.g. Supplier Invoice #8812">
           </div>
         </div>
+
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeAdjustModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Update Stock</button>
+          <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeAdjustStockModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> Save Adjustment
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Barcode Scanner & Auto-Detector Modal -->
-  <div id="modal-barcode-detector" class="modal-overlay">
-    <div class="modal-card">
+  <!-- AUTO BARCODE DETECTOR & ONLINE LOOKUP MODAL (Matches AdminPanel DOM IDs) -->
+  <div id="modal-barcode-detector" class="modal-backdrop">
+    <div class="modal-dialog modal-barcode-detector-dialog">
       <div class="modal-header">
-        <h3><i data-lucide="scan-barcode"></i> Barcode Scanner & Item Detector</h3>
-        <button type="button" class="icon-btn" onclick="AdminPanel.closeBarcodeDetectorModal()">
+        <div class="modal-title" style="display:flex; align-items:center; gap:0.75rem;">
+          <div class="modal-icon-badge">
+            <i data-lucide="scan-barcode"></i>
+          </div>
+          <div>
+            <h3 style="margin:0;">Supplies Barcode Scanner</h3>
+            <p class="modal-subtitle">Auto-detect supplies with product photo and reflect into inventory.</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="AdminPanel.closeBarcodeDetectorModal()">
           <i data-lucide="x"></i>
         </button>
       </div>
+
       <div class="modal-body">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-          <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button type="button" id="btn-bc-camera-toggle" class="btn btn-primary btn-sm" onclick="AdminPanel.toggleBarcodeCamera()">
-              <i data-lucide="camera"></i> Use Camera Scanner
-            </button>
-            <button type="button" id="btn-bc-switch-cam" class="btn btn-secondary btn-sm" style="display:none;" onclick="AdminPanel.switchBarcodeCamera()" title="Switch Front/Back Camera">
-              <i data-lucide="refresh-cw"></i> Switch Camera
-            </button>
-            <button type="button" id="btn-bc-torch" class="btn btn-secondary btn-sm" style="display:none;" onclick="AdminPanel.toggleBarcodeTorch()" title="Toggle Flashlight">
-              <i data-lucide="zap"></i> Flash
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('bc-image-file-input').click()" title="Scan barcode from photo">
-              <i data-lucide="image"></i> Scan Photo
-            </button>
-            <input type="file" id="bc-image-file-input" accept="image/*" capture="environment" style="display:none;" onchange="AdminPanel.scanBarcodeFromImage(event)">
-          </div>
-          <span id="bc-scanner-status" class="badge badge-secondary">USB / Manual Mode</span>
-        </div>
-
-        <div id="bc-camera-Select-row" style="display:none; margin-bottom:10px;">
-          <select id="bc-camera-select" class="select-input" style="width:100%; font-size:0.82rem; padding:6px 10px;" onchange="AdminPanel.onSelectBarcodeCamera(this.value)">
-          </select>
-        </div>
-
-        <div id="bc-camera-container" style="display:none; margin-bottom:14px; border-radius:12px; overflow:hidden; border:2px solid var(--primary); background:#000; position:relative;">
-          <div id="bc-camera-reader" style="width:100%; min-height:240px;"></div>
-          <div style="text-align:center; padding:6px 10px; font-size:0.75rem; color:#38bdf8; background:rgba(2,132,199,0.15); display:flex; justify-content:space-between; align-items:center;">
-            <span>Hold barcode steady 10–15cm from camera</span>
-            <span id="bc-engine-badge" style="font-size:0.68rem; opacity:0.85;">Multi-Engine HD</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Scan or Type Barcode / SKU</label>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="barcode-detector-input" class="form-input" placeholder="Scan with USB scanner, camera, or type barcode..." autofocus
-              onkeydown="if(event.key==='Enter'){ event.preventDefault(); AdminPanel.lookupBarcodeItem(); }">
-            <button type="button" class="btn btn-primary" onclick="AdminPanel.lookupBarcodeItem()">
-              <i data-lucide="search"></i> Detect
-            </button>
-          </div>
-          <small class="text-muted">Supports USB laser scanners, mobile/webcam cameras, and manual SKU entry.</small>
-        </div>
-
-        <!-- Detected Item Card -->
-        <div id="barcode-detected-result" style="display:none; margin-top:16px; padding:16px; border-radius:12px; background:var(--bg-surface-elevated, rgba(2,132,199,0.08)); border:1px solid var(--border);">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
-            <div>
-              <span class="badge badge-success" id="bc-det-status-badge" style="margin-bottom:4px; display:inline-block;">ITEM MATCHED</span>
-              <h4 id="bc-det-name" style="margin:0; font-size:1.1rem;">Product Name</h4>
-              <small class="text-muted" id="bc-det-meta">Brand • SKU • Category</small>
+        <!-- Hero Barcode Scanner Input Bar -->
+        <div class="barcode-hero-scanner">
+          <div class="scanner-input-box">
+            <div class="scanner-input-icon">
+              <i data-lucide="scan-line"></i>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:0.75rem; color:var(--text-muted);">Current Stock</div>
-              <div id="bc-det-stock" style="font-size:1.5rem; font-weight:800; color:var(--primary);">0</div>
+            <input type="text" id="barcode-detector-input" class="barcode-detector-input"
+              placeholder="Scan barcode with gun scanner or type number..."
+              autocomplete="off"
+              onkeydown="if(event.key==='Enter'){ event.preventDefault(); AdminPanel.triggerBarcodeSearch(); }"
+              oninput="if(this.value && this.value.trim().length >= 12){ AdminPanel.triggerBarcodeDebounced(); }">
+            <span class="scanner-enter-badge">Press ↵ Enter</span>
+          </div>
+          <div class="scanner-helper-info">
+            <i data-lucide="zap" class="helper-icon"></i>
+            <span>Point USB scanner gun at barcode, use camera below, or click a quick preset.</span>
+          </div>
+        </div>
+
+        <!-- Searching / Loading Indicator -->
+        <div class="barcode-searching-loader mt-3" id="barcode-detector-loading" style="display:none;">
+          <div class="searching-spinner"></div>
+          <div class="searching-texts">
+            <h5>Detecting Barcode & Detergent Formulation...</h5>
+            <p>Identifying brand, photo, and detergent type automatically.</p>
+          </div>
+        </div>
+
+        <!-- Detected Product Result Preview & Auto-Reflect Card -->
+        <div class="detected-product-card mt-3" id="barcode-detector-result" style="display:none;">
+          <div class="detected-card-header">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span class="badge-source" id="detected-source-badge">Online Registry</span>
+              <span class="badge-brand" id="detected-brand-badge" style="display:none;">Brand: Breeze</span>
+            </div>
+            <span class="detected-barcode-pill" id="detected-barcode-display">8934868113034</span>
+          </div>
+
+          <div class="detected-card-body">
+            <div class="detected-thumb-box">
+              <img id="detected-product-image" src="" alt="Product Photo" onerror="this.src='https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80'">
+            </div>
+            <div class="detected-info-form">
+              <div class="form-row mb-2">
+                <div class="form-group col-7">
+                  <label class="text-xs text-muted">Detected Product Name</label>
+                  <input type="text" id="detected-product-name" class="form-control form-control-sm font-bold">
+                </div>
+                <div class="form-group col-5">
+                  <label class="text-xs text-muted">Detected Brand</label>
+                  <input type="text" id="detected-product-brand" class="form-control form-control-sm font-bold" placeholder="Brand Name" style="color: var(--primary);">
+                </div>
+              </div>
+
+              <div class="form-row mb-2">
+                <div class="form-group col-6">
+                  <label class="text-xs text-muted">Pricing / Dispense Unit</label>
+                  <select id="detected-product-unit" class="form-control form-control-sm">
+                    <option value="sachet">Per Sachet</option>
+                    <option value="scoop">Per Scoop</option>
+                    <option value="bottle">Per Bottle</option>
+                    <option value="load">Per Load</option>
+                    <option value="pc">Per Piece</option>
+                    <option value="kg">Per Kilo (kg)</option>
+                  </select>
+                </div>
+                <div class="form-group col-6">
+                  <label class="text-xs text-muted">Direct Cost (₱)</label>
+                  <input type="number" id="detected-product-cost" class="form-control form-control-sm" step="any" min="0" value="15.00">
+                </div>
+              </div>
+
+              <div class="form-row mb-2">
+                <div class="form-group col-12">
+                  <label class="text-xs text-muted">Stock Quantity (Type manually):</label>
+                  <div class="qty-stepper-row">
+                    <input type="number" id="detected-product-qty" class="form-control form-control-sm font-bold" min="1" step="any" placeholder="Type quantity..."
+                      onkeydown="if(event.key==='Enter'){ event.preventDefault(); AdminPanel.confirmReflectSupplyItem(); }">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.adjustDetectedQty(10)">+10</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.adjustDetectedQty(25)">+25</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.adjustDetectedQty(50)">+50</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="AdminPanel.adjustDetectedQty(100)">+100</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="inventory-status-pill mt-2" id="detected-existing-stock-note"></div>
             </div>
           </div>
 
-          <div id="bc-det-stock-controls" style="border-top:1px solid var(--border); padding-top:12px; margin-top:8px;">
-            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:8px;">Quick Stock Action (Auto-logs to Supplies History)</label>
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <input type="number" id="bc-det-qty" class="form-input" value="1" min="1" style="width:90px;">
-              <input type="text" id="bc-det-reason" class="form-input" placeholder="Note (e.g., Barcode restock / usage)" style="flex:1; min-width:160px;">
-              <button type="button" class="btn btn-success btn-sm" onclick="InventorySite.quickBarcodeStockUpdate('add')">
-                <i data-lucide="plus"></i> Restock (+Add)
+          <div class="detected-card-footer mt-3" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-success" style="flex: 1;" id="btn-confirm-reflect-supply" onclick="AdminPanel.confirmReflectSupplyItem()">
+              <i data-lucide="check-circle-2"></i> Reflect into Supplies Inventory Now
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="AdminPanel.resetForNextScan()">
+              <i data-lucide="scan-barcode"></i> Scan Next Item
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Detergent & Supplies Presets -->
+        <div class="barcode-presets-section mt-3">
+          <div class="presets-header">
+            <span class="presets-label"><i data-lucide="sparkles"></i> Quick Presets (Click to Detect with Photo):</span>
+          </div>
+          <div class="barcode-presets-grid">
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('8934868113034')">
+              🫧 Breeze Liquid
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('4800092330052')">
+              🧺 Ariel Powder
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('4800092113228')">
+              🧼 Tide Powder
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('4902430730006')">
+              🌸 Downy Fabcon
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('8710447385555')">
+              🌺 Surf Powder
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('4800888123456')">
+              🫧 Breeze Powder
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('4800119223344')">
+              ✨ Zonrox Bleach
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('4800555112233')">
+              ⭐ Pride Powder
+            </button>
+            <button type="button" class="preset-barcode-chip" onclick="AdminPanel.testScanPreset('037000806497')">
+              🌿 Gain Pods
+            </button>
+          </div>
+        </div>
+
+        <!-- Camera Viewport -->
+        <div class="scanner-camera-card mt-3">
+          <div class="camera-card-header">
+            <div class="camera-status-pill" id="camera-status-pill">
+              <span class="status-dot"></span>
+              <span id="camera-status-text">Device Webcam / Camera</span>
+            </div>
+            <div class="camera-actions-row">
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-toggle-camera" onclick="AdminPanel.toggleBarcodeCamera()">
+                <i data-lucide="camera"></i> Start Camera
               </button>
-              <button type="button" class="btn btn-warning btn-sm" onclick="InventorySite.quickBarcodeStockUpdate('deduct')">
-                <i data-lucide="minus"></i> Use (-Deduct)
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-flip-camera" onclick="AdminPanel.flipBarcodeCamera()" style="display:none;">
+                <i data-lucide="refresh-cw"></i> Flip
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- Not Found State -->
-        <div id="barcode-not-found" style="display:none; margin-top:16px; padding:16px; border-radius:12px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3);">
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-            <i data-lucide="help-circle" style="color:var(--danger); width:22px; height:22px;"></i>
-            <div>
-              <strong style="display:block;">Barcode Not Registered Yet</strong>
-              <small class="text-muted" id="bc-not-found-code">Code: ---</small>
+          <div class="camera-viewport-wrapper" id="camera-viewport-wrapper" style="display:none;">
+            <video id="barcode-native-video" playsinline muted autoplay style="display:none;"></video>
+            <div id="barcode-camera-stream" class="barcode-camera-stream" style="display:none;"></div>
+            <div class="scanner-laser-line" id="scanner-laser-line" style="display:none;"></div>
+            <div class="scanner-reticle" id="scanner-reticle" style="display:none;">
+              <span class="reticle-corner tl"></span>
+              <span class="reticle-corner tr"></span>
+              <span class="reticle-corner bl"></span>
+              <span class="reticle-corner br"></span>
             </div>
           </div>
-          <p style="font-size:0.83rem; margin-bottom:12px;" class="text-muted">Would you like to register this barcode as a new supply item?</p>
-          <button type="button" class="btn btn-primary btn-sm" onclick="InventorySite.registerNewItemFromBarcode()">
-            <i data-lucide="plus"></i> Register New Supply with This Barcode
-          </button>
         </div>
       </div>
+
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeBarcodeDetectorModal()">Close</button>
+        <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeBarcodeDetectorModal()">Done</button>
       </div>
     </div>
   </div>
 
-  <!-- Supplies Audit Logs Modal -->
-  <div id="modal-inventory-logs" class="modal-overlay">
-    <div class="modal-card modal-lg">
+  <!-- AUDIT LOGS MODAL -->
+  <div id="modal-inventory-logs" class="modal-backdrop">
+    <div class="modal-dialog modal-logs-dialog">
       <div class="modal-header">
-        <h3><i data-lucide="clipboard-list"></i> Supplies Audit Logs</h3>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.exportInventoryLogsCSV()">
-            <i data-lucide="download"></i> Export CSV
-          </button>
-          <button type="button" class="icon-btn" onclick="AdminPanel.closeInventoryLogsModal()">
-            <i data-lucide="x"></i>
-          </button>
+        <div class="modal-title">
+          <i data-lucide="clipboard-list"></i>
+          <h3>Supplies Inventory Audit Logs</h3>
         </div>
+        <button type="button" class="modal-close-btn" onclick="AdminPanel.closeInventoryLogsModal()">
+          <i data-lucide="x"></i>
+        </button>
       </div>
       <div class="modal-body">
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Date/Time</th>
+                <th>Date / Time</th>
                 <th>Supply Item</th>
-                <th>Change</th>
-                <th>Prev</th>
-                <th>New</th>
-                <th>Reason</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Prev &rarr; New</th>
+                <th>Reason & Notes</th>
                 <th>User</th>
               </tr>
             </thead>
@@ -661,28 +1193,25 @@
     </div>
   </div>
 
-  <!-- Custom Confirm Modal -->
-  <div id="modal-confirm" class="modal-overlay">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3 id="confirm-title"><i data-lucide="alert-circle"></i> Confirm Action</h3>
-        <button type="button" class="icon-btn" onclick="InventorySite.closeConfirmModal()">
-          <i data-lucide="x"></i>
-        </button>
+  <!-- CONFIRMATION MODAL -->
+  <div id="modal-confirm" class="modal-backdrop">
+    <div class="modal-dialog modal-confirm-dialog">
+      <div class="confirm-icon-circle">
+        <i data-lucide="alert-triangle"></i>
       </div>
-      <div class="modal-body">
-        <p id="confirm-message">Are you sure you want to proceed?</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="InventorySite.closeConfirmModal()">Cancel</button>
-        <button type="button" id="confirm-Action-btn" class="btn btn-danger">Confirm</button>
+      <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
+      <p class="confirm-message" id="confirm-message">This action cannot be undone.</p>
+
+      <div class="modal-footer confirm-footer">
+        <button type="button" class="btn btn-secondary" id="btn-confirm-cancel" onclick="InventorySite.closeConfirmModal()">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-ok">Confirm</button>
       </div>
     </div>
   </div>
 
   <!-- Session Forced-Logout / Disabled Modal -->
-  <div id="modal-admin-timeout" class="modal-overlay" style="z-index: 99999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px);">
-    <div class="modal-card modal-sm" style="border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); text-align: center; padding: 28px 24px;">
+  <div id="modal-admin-timeout" class="modal-backdrop" style="z-index: 99999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px);">
+    <div class="modal-dialog modal-confirm-dialog" style="border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); text-align: center; padding: 28px 24px;">
       <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 2px solid rgba(245, 158, 11, 0.4); color: #f59e0b; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
         <i data-lucide="clock" style="width: 32px; height: 32px;"></i>
       </div>
@@ -706,14 +1235,18 @@
   <script src="js/data.js"></script>
   <script src="js/sound.js"></script>
   <script src="js/laundry-splash.js"></script>
-  <script src="js/admin.js?v=3.4"></script>
+  <script src="js/admin.js?v=3.5"></script>
   <script>
+    const DEFAULT_SUPPLY_IMG = "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80";
+
     const InventorySite = {
       currentUser: null,
       currentSessionId: null,
       _isLoggingOut: false,
       _heartbeatTimer: null,
       activeSection: "stock",
+      filterStatus: "ALL",
+      layoutMode: "grid", // 'grid' (Visual Photo Cards) or 'table'
 
       init() {
         Sound.init();
@@ -724,7 +1257,9 @@
         this.setupUnloadBeacon();
 
         // Populate category select in Add/Edit Supply modal
-        AdminPanel.populateCategorySelect();
+        if (typeof AdminPanel.populateCategorySelects === "function") {
+          AdminPanel.populateCategorySelects();
+        }
         this.refreshAll();
 
         // Listen for real-time sync updates
@@ -771,14 +1306,13 @@
         }
 
         // Ensure Attendance Time-In is active for Inventory Manager
-        if (this.currentUser.role === "INVENTORY_MANAGER") {
-          let activePunch = AttendanceManager.getActiveRecordForUser(this.currentUser.id);
-          if (!activePunch) {
-            activePunch = AttendanceManager.clockIn(this.currentUser);
-          }
-          if (activePunch && activePunch.id) {
-            sessionStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", activePunch.id);
-            localStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", activePunch.id);
+        if (this.currentUser.role === "INVENTORY_MANAGER" && typeof AttendanceManager !== "undefined") {
+          if (typeof AttendanceManager.recordTimeIn === "function") {
+            const rec = AttendanceManager.recordTimeIn(this.currentUser);
+            if (rec && rec.id) {
+              sessionStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", rec.id);
+              localStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", rec.id);
+            }
           }
         }
 
@@ -822,12 +1356,13 @@
       },
 
       updateAttendanceBadge() {
-        if (!this.currentUser) return;
+        if (!this.currentUser || typeof AttendanceManager === "undefined") return;
         const badgeEl = document.getElementById("inv-attendance-badge");
         const timeEl = document.getElementById("inv-attendance-time");
         if (!badgeEl || !timeEl) return;
 
-        const activeRec = AttendanceManager.getActiveRecordForUser(this.currentUser.id);
+        const data = StorageManager.get();
+        const activeRec = (data.attendance || []).find(a => a.userId === this.currentUser.id && a.status === "CLOCKED_IN");
         if (activeRec && activeRec.timeIn) {
           const t = new Date(activeRec.timeIn).toLocaleTimeString("en-US", {
             hour: "numeric",
@@ -876,15 +1411,53 @@
           if (logsSec) logsSec.style.display = "none";
           if (stockBtn) stockBtn.classList.add("active");
           if (logsBtn) logsBtn.classList.remove("active");
-          this.renderSuppliesTable();
+          this.renderSupplies();
         }
         Sound.playClick();
         if (window.lucide) lucide.createIcons();
       },
 
+      setFilterStatus(status) {
+        this.filterStatus = status;
+        ["ALL", "LOW", "OUT", "HEALTHY"].forEach(s => {
+          const btn = document.getElementById(`inv-filter-btn-${s}`);
+          if (btn) btn.classList.toggle("active", s === status);
+        });
+        if (this.activeSection !== "stock") {
+          this.switchSection("stock");
+        } else {
+          this.renderSupplies();
+        }
+      },
+
+      setLayoutMode(mode) {
+        this.layoutMode = mode;
+        const btnGrid = document.getElementById("btn-inv-layout-grid");
+        const btnTable = document.getElementById("btn-inv-layout-table");
+        const gridEl = document.getElementById("inv-supplies-cards-grid");
+        const tableWrap = document.getElementById("inv-supplies-table-wrap");
+
+        if (btnGrid) btnGrid.classList.toggle("active", mode === "grid");
+        if (btnTable) btnTable.classList.toggle("active", mode === "table");
+        if (gridEl) gridEl.style.display = mode === "grid" ? "grid" : "none";
+        if (tableWrap) tableWrap.style.display = mode === "table" ? "block" : "none";
+
+        this.renderSupplies();
+        Sound.playClick();
+      },
+
+      getSupplyStock(p) {
+        if (p.stockQuantity !== undefined && p.stockQuantity !== null) return Number(p.stockQuantity) || 0;
+        return Number(p.stock) || 0;
+      },
+
+      getSupplyImage(p) {
+        return p.imageUrl || p.image || DEFAULT_SUPPLY_IMG;
+      },
+
       refreshAll() {
         this.renderKpis();
-        this.renderSuppliesTable();
+        this.renderSupplies();
         if (this.activeSection === "logs") {
           this.renderInlineLogs();
         }
@@ -895,9 +1468,12 @@
         const data = StorageManager.get();
         const supplies = (data.products || []).filter(p => !p.isService);
         const totalItems = supplies.length;
-        const totalUnits = supplies.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
-        const outStock = supplies.filter(p => (Number(p.stock) || 0) <= 0).length;
-        const lowStock = supplies.filter(p => (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= (Number(p.lowStockThreshold) || 10)).length;
+        const totalUnits = supplies.reduce((sum, p) => sum + this.getSupplyStock(p), 0);
+        const outStock = supplies.filter(p => this.getSupplyStock(p) <= 0).length;
+        const lowStock = supplies.filter(p => {
+          const st = this.getSupplyStock(p);
+          return st > 0 && st <= (Number(p.lowStockThreshold) || 10);
+        }).length;
 
         const elTotal = document.getElementById("inv-kpi-total-items");
         const elUnits = document.getElementById("inv-kpi-total-units");
@@ -910,36 +1486,38 @@
         if (elOut) elOut.textContent = outStock;
       },
 
-      renderSuppliesTable() {
-        const tbody = document.getElementById("admin-inventory-tbody");
-        if (!tbody) return;
-
+      renderSupplies() {
         const data = StorageManager.get();
         const allSupplies = (data.products || []).filter(p => !p.isService);
+        const categories = data.categories || [];
+        const catMap = {};
+        categories.forEach(c => { catMap[c.id] = c.name; });
+
         const query = (document.getElementById("inv-search-input")?.value || "").toLowerCase().trim();
-        const statusFilter = document.getElementById("inv-stock-filter")?.value || "ALL";
+        const statusFilter = this.filterStatus || "ALL";
 
         // Update Low Stock Alert Banner
-        const lowStockItems = allSupplies.filter(p => (Number(p.stock) || 0) <= (Number(p.lowStockThreshold) || 10));
-        const banner = document.getElementById("low-stock-alert-banner");
+        const lowStockItems = allSupplies.filter(p => this.getSupplyStock(p) <= (Number(p.lowStockThreshold) || 10));
+        const banner = document.getElementById("inventory-low-stock-banner");
         const bannerText = document.getElementById("low-stock-alert-text");
         if (banner && bannerText) {
           if (lowStockItems.length > 0) {
             banner.style.display = "flex";
-            bannerText.textContent = `${lowStockItems.length} supply item(s) need attention: ${lowStockItems.map(i => `${i.name} (${i.stock} left)`).join(", ")}`;
+            bannerText.textContent = `${lowStockItems.length} supply item(s) need attention: ${lowStockItems.map(i => `${i.name} (${this.getSupplyStock(i)} ${i.unit || 'pcs'} left)`).join(", ")}`;
           } else {
             banner.style.display = "none";
           }
         }
 
-        let filtered = allSupplies.filter(p => {
+        const filtered = allSupplies.filter(p => {
           if (query) {
             const matchName = (p.name || "").toLowerCase().includes(query);
             const matchBrand = (p.brand || "").toLowerCase().includes(query);
             const matchSku = (p.sku || "").toLowerCase().includes(query);
-            if (!matchName && !matchBrand && !matchSku) return false;
+            const matchBarcode = (p.barcode || "").toLowerCase().includes(query);
+            if (!matchName && !matchBrand && !matchSku && !matchBarcode) return false;
           }
-          const stock = Number(p.stock) || 0;
+          const stock = this.getSupplyStock(p);
           const threshold = Number(p.lowStockThreshold) || 10;
           if (statusFilter === "OUT") return stock <= 0;
           if (statusFilter === "LOW") return stock > 0 && stock <= threshold;
@@ -952,42 +1530,174 @@
           countLabel.textContent = `Showing ${filtered.length} of ${allSupplies.length} supply items`;
         }
 
-        if (filtered.length === 0) {
+        this.renderCardsGrid(filtered, catMap);
+        this.renderTableRows(filtered, catMap);
+        if (window.lucide) lucide.createIcons();
+      },
+
+      renderCardsGrid(items, catMap) {
+        const grid = document.getElementById("inv-supplies-cards-grid");
+        if (!grid) return;
+
+        if (items.length === 0) {
+          grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align:center; padding:48px 20px; background:var(--bg-surface); border:1px dashed var(--border-color); border-radius:16px;">
+              <i data-lucide="package-search" style="width:44px; height:44px; color:var(--primary); margin-bottom:10px;"></i>
+              <h4 style="margin:0 0 6px;">No Matching Laundry Supplies</h4>
+              <p class="text-muted" style="margin:0 0 16px; font-size:0.88rem;">Add a new detergent or supply item or scan a barcode to get started.</p>
+              <button type="button" class="btn btn-primary btn-sm" onclick="InventorySite.openAddSupplyModal()">
+                <i data-lucide="plus"></i> Add Supply / Detergent
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        let html = "";
+        items.forEach(p => {
+          const stock = this.getSupplyStock(p);
+          const threshold = Number(p.lowStockThreshold) || 10;
+          const unit = p.unit || "pc";
+          const costVal = (p.costPrice !== undefined && p.costPrice > 0) ? p.costPrice : (p.price || 0);
+          const imgSrc = this.getSupplyImage(p);
+          const isOut = stock <= 0;
+          const isLow = !isOut && stock <= threshold;
+
+          let statusBadge = `<span class="badge-pill badge-active" style="box-shadow:0 2px 8px rgba(0,0,0,0.35);">IN STOCK</span>`;
+          let stockColor = "#10b981";
+          let cardStateClass = "";
+          if (isOut) {
+            statusBadge = `<span class="badge-pill badge-disabled" style="background:#ef4444; color:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.35);">OUT OF STOCK</span>`;
+            stockColor = "#ef4444";
+            cardStateClass = "is-out-stock";
+          } else if (isLow) {
+            statusBadge = `<span class="badge-pill badge-warning" style="box-shadow:0 2px 8px rgba(0,0,0,0.35);">LOW STOCK</span>`;
+            stockColor = "#f59e0b";
+            cardStateClass = "is-low-stock";
+          }
+
+          const pct = Math.min(100, Math.max(4, Math.round((stock / Math.max(threshold * 4, 40)) * 100)));
+
+          html += `
+            <div class="inv-supply-card ${cardStateClass}">
+              <div class="inv-card-img-wrap" onclick="InventorySite.openImagePreview('${p.id}')" title="Click to view full supply photo">
+                <img src="${imgSrc}" alt="${p.name}" loading="lazy" onerror="this.src='${DEFAULT_SUPPLY_IMG}'">
+                <div class="inv-card-top-badges">
+                  ${p.brand ? `<span class="badge-brand" style="box-shadow:0 2px 8px rgba(0,0,0,0.4);">${p.brand}</span>` : `<span></span>`}
+                  ${statusBadge}
+                </div>
+                <button type="button" class="inv-card-photo-btn" onclick="event.stopPropagation(); InventorySite.editSupplyItem('${p.id}')" title="Change supply photo or details">
+                  <i data-lucide="camera" style="width:12px; height:12px;"></i> Photo
+                </button>
+                <span class="inv-card-zoom-hint">
+                  <i data-lucide="maximize-2" style="width:11px; height:11px;"></i> View
+                </span>
+              </div>
+
+              <div class="inv-card-body">
+                <div>
+                  <div class="inv-card-submeta">
+                    <span>${catMap[p.categoryId] || 'Laundry Supplies'}</span>
+                    <span class="font-mono">${p.sku || p.barcode || ''}</span>
+                  </div>
+                  <h4 class="inv-card-title" title="${p.name}">${p.name}</h4>
+                </div>
+
+                <!-- Visual Stock Level Box -->
+                <div class="inv-stock-meter-box" onclick="AdminPanel.openAdjustStockModal('${p.id}', 'SET')" style="cursor:pointer;" title="Click to set exact stock count">
+                  <div class="inv-stock-meter-top">
+                    <div>
+                      <span class="inv-stock-big-num" style="color:${stockColor};">${stock}</span>
+                      <small class="text-muted" style="font-weight:600;">${unit}${stock === 1 ? '' : 's'}</small>
+                    </div>
+                    <div style="text-align:right; font-size:0.74rem; color:var(--text-muted);">
+                      Cost: <strong style="color:var(--text-primary);">₱${Number(costVal).toFixed(2)}</strong> / ${unit}<br>
+                      Alert at: <strong>${threshold}</strong>
+                    </div>
+                  </div>
+                  <div class="inv-stock-bar-track">
+                    <div class="inv-stock-bar-fill" style="width:${isOut ? 0 : pct}%; background:${stockColor};"></div>
+                  </div>
+                </div>
+
+                <!-- One-Tap Quick Stock Stepper -->
+                <div class="inv-quick-stepper">
+                  <button type="button" class="inv-step-btn minus" onclick="InventorySite.quickStepStock('${p.id}', -1)" title="Deduct 1 ${unit} (Used in wash)">
+                    <i data-lucide="minus" style="width:13px; height:13px;"></i> 1 Used
+                  </button>
+                  <button type="button" class="inv-step-btn plus" onclick="InventorySite.quickStepStock('${p.id}', 1)" title="Add 1 ${unit}">
+                    <i data-lucide="plus" style="width:13px; height:13px;"></i> 1 Add
+                  </button>
+                  <button type="button" class="inv-step-btn plus" onclick="InventorySite.quickStepStock('${p.id}', 10)" title="Restock +10 ${unit}s">
+                    <i data-lucide="plus" style="width:13px; height:13px;"></i> 10 Restock
+                  </button>
+                </div>
+
+                <div class="inv-card-footer">
+                  <button type="button" class="btn btn-primary btn-sm" style="flex:1;" onclick="AdminPanel.openAdjustStockModal('${p.id}')">
+                    <i data-lucide="sliders"></i> Adjust Stock
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="InventorySite.editSupplyItem('${p.id}')" title="Edit supply details & photo">
+                    <i data-lucide="edit-2"></i> Edit
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        grid.innerHTML = html;
+      },
+
+      renderTableRows(items, catMap) {
+        const tbody = document.getElementById("admin-inventory-table-tbody");
+        if (!tbody) return;
+
+        if (items.length === 0) {
           tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">No matching laundry supplies found.</td></tr>`;
           return;
         }
 
         let html = "";
-        filtered.forEach(p => {
-          const stock = Number(p.stock) || 0;
+        items.forEach(p => {
+          const stock = this.getSupplyStock(p);
           const threshold = Number(p.lowStockThreshold) || 10;
+          const unit = p.unit || "pc";
+          const costVal = (p.costPrice !== undefined && p.costPrice > 0) ? p.costPrice : (p.price || 0);
+          const imgSrc = this.getSupplyImage(p);
           const isOut = stock <= 0;
-          const isLow = stock > 0 && stock <= threshold;
+          const isLow = !isOut && stock <= threshold;
 
-          let statusBadge = `<span class="badge badge-success">In Stock</span>`;
-          if (isOut) statusBadge = `<span class="badge badge-danger">Out of Stock</span>`;
-          else if (isLow) statusBadge = `<span class="badge badge-warning">Low Stock</span>`;
+          let statusBadge = `<span class="badge-pill badge-active">In Stock</span>`;
+          if (isOut) statusBadge = `<span class="badge-pill badge-disabled">Out of Stock</span>`;
+          else if (isLow) statusBadge = `<span class="badge-pill badge-warning">Low Stock</span>`;
 
           html += `
             <tr>
               <td>
-                <div style="display:flex; align-items:center; gap:10px;">
-                  <span class="color-dot" style="background:${p.color || '#0284c7'}"></span>
-                  <strong>${p.name}</strong>
-                </div>
+                <img src="${imgSrc}" alt="${p.name}" class="inv-table-thumb" onclick="InventorySite.openImagePreview('${p.id}')" title="Click to enlarge photo" onerror="this.src='${DEFAULT_SUPPLY_IMG}'">
               </td>
-              <td>${p.brand || "-"}</td>
-              <td class="font-mono">${p.sku || "-"}</td>
-              <td>${App.formatCurrency(p.price || 0)}</td>
-              <td><strong class="${isOut ? 'text-danger' : isLow ? 'text-warning' : 'text-success'}" style="font-size:1rem;">${stock}</strong></td>
+              <td>
+                <b>${p.name}</b>
+                ${p.brand ? `<span class="badge-brand" style="font-size: 0.68rem; margin-left: 6px;">${p.brand}</span>` : ''}
+                <br><small class="text-muted">${catMap[p.categoryId] || 'Laundry Supplies'}</small>
+              </td>
+              <td class="font-mono"><small class="text-muted">${p.sku || p.barcode || 'N/A'}</small></td>
+              <td><strong>₱${Number(costVal).toFixed(2)}</strong> <small class="text-muted">/ ${unit}</small></td>
+              <td class="font-bold ${isLow || isOut ? 'text-danger' : 'text-success'}" style="cursor: pointer;" onclick="AdminPanel.openAdjustStockModal('${p.id}', 'SET')" title="Click to customize quantity">
+                <b style="font-size:1rem;">${stock}</b> <small class="text-muted">${unit}</small>
+                <i data-lucide="edit-3" style="width:12px; height:12px; vertical-align:middle; opacity:0.6; margin-left:4px;"></i>
+              </td>
               <td>${threshold}</td>
               <td>${statusBadge}</td>
               <td class="text-right">
-                <div class="table-actions" style="justify-content:flex-end;">
-                  <button type="button" class="btn btn-primary btn-sm" onclick="AdminPanel.openAdjustModal('${p.id}')">
-                    <i data-lucide="Sliders"></i> Adjust Stock
+                <div class="table-actions-flex" style="justify-content: flex-end; gap: 6px;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="InventorySite.quickStepStock('${p.id}', -1)" title="Deduct 1 ${unit}">-1</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="InventorySite.quickStepStock('${p.id}', 1)" title="Add 1 ${unit}">+1</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="AdminPanel.openAdjustStockModal('${p.id}')" title="Adjust Stock">
+                    <i data-lucide="sliders"></i> Adjust
                   </button>
-                  <button type="button" class="icon-btn sm" onclick="InventorySite.editSupplyItem('${p.id}')" title="Edit Supply Item">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="InventorySite.editSupplyItem('${p.id}')" title="Edit Supply & Photo">
                     <i data-lucide="edit-2"></i>
                   </button>
                 </div>
@@ -997,7 +1707,89 @@
         });
 
         tbody.innerHTML = html;
+      },
+
+      quickStepStock(productId, delta) {
+        const data = StorageManager.get();
+        const prod = (data.products || []).find(p => p.id === productId);
+        if (!prod) return;
+
+        const prevStock = this.getSupplyStock(prod);
+        const newStock = Math.max(0, prevStock + delta);
+        if (newStock === prevStock && delta < 0) {
+          this.showToast(`"${prod.name}" is already at 0 stock.`, "warning");
+          return;
+        }
+
+        prod.stockQuantity = newStock;
+        const nowIso = new Date().toISOString();
+        if (!data.inventoryLogs) data.inventoryLogs = [];
+        data.inventoryLogs.unshift({
+          id: "log-" + Date.now(),
+          productId: prod.id,
+          productName: prod.name,
+          type: delta > 0 ? "RESTOCK" : "USED",
+          quantity: newStock - prevStock,
+          previousStock: prevStock,
+          newStock: newStock,
+          reason: delta > 0 ? "Quick Restock" : "Used in Wash",
+          notes: `1-Tap (${delta > 0 ? '+' + delta : delta} ${prod.unit || 'pc'})`,
+          userName: this.currentUser ? this.currentUser.fullName : "Inventory Manager",
+          createdAt: nowIso,
+          timestamp: nowIso
+        });
+
+        StorageManager.save(data);
+        Sound.playClick();
+        this.refreshAll();
+        this.showToast(`${prod.name}: ${prevStock} → ${newStock} ${prod.unit || 'pcs'}`, "success");
+      },
+
+      openImagePreview(productId) {
+        const data = StorageManager.get();
+        const prod = (data.products || []).find(p => p.id === productId);
+        if (!prod) return;
+
+        const modal = document.getElementById("modal-image-lightbox");
+        const titleEl = document.getElementById("lightbox-title");
+        const imgEl = document.getElementById("lightbox-img");
+        const metaEl = document.getElementById("lightbox-meta");
+        const editBtn = document.getElementById("lightbox-edit-btn");
+        const adjBtn = document.getElementById("lightbox-adjust-btn");
+
+        if (titleEl) titleEl.textContent = prod.name;
+        if (imgEl) {
+          imgEl.src = this.getSupplyImage(prod);
+          imgEl.onerror = () => { imgEl.src = DEFAULT_SUPPLY_IMG; };
+        }
+        if (metaEl) {
+          const stock = this.getSupplyStock(prod);
+          metaEl.innerHTML = `
+            ${prod.brand ? `<span class="badge-brand" style="margin-right:6px;">${prod.brand}</span>` : ''}
+            <span>Stock: <strong>${stock} ${prod.unit || 'pcs'}</strong></span> •
+            <span>SKU/Barcode: <strong>${prod.sku || prod.barcode || 'N/A'}</strong></span>
+          `;
+        }
+        if (editBtn) {
+          editBtn.onclick = () => {
+            this.closeImagePreview();
+            this.editSupplyItem(prod.id);
+          };
+        }
+        if (adjBtn) {
+          adjBtn.onclick = () => {
+            this.closeImagePreview();
+            AdminPanel.openAdjustStockModal(prod.id);
+          };
+        }
+
+        if (modal) modal.classList.add("active");
         if (window.lucide) lucide.createIcons();
+      },
+
+      closeImagePreview() {
+        const modal = document.getElementById("modal-image-lightbox");
+        if (modal) modal.classList.remove("active");
       },
 
       renderInlineLogs() {
@@ -1006,6 +1798,9 @@
 
         const data = StorageManager.get();
         const allLogs = data.inventoryLogs || [];
+        const prodMap = {};
+        (data.products || []).forEach(p => { prodMap[p.id] = p; });
+
         const query = (document.getElementById("inv-log-search")?.value || "").toLowerCase().trim();
 
         const logs = allLogs.filter(l => {
@@ -1013,7 +1808,8 @@
           return (
             (l.productName || "").toLowerCase().includes(query) ||
             (l.reason || "").toLowerCase().includes(query) ||
-            (l.user || "").toLowerCase().includes(query)
+            (l.notes || "").toLowerCase().includes(query) ||
+            (l.userName || l.user || "").toLowerCase().includes(query)
           );
         });
 
@@ -1027,19 +1823,27 @@
 
         let html = "";
         logs.forEach(l => {
-          const d = new Date(l.timestamp);
-          const sign = l.changeQty > 0 ? "+" : "";
-          const cls = l.changeQty > 0 ? "text-success" : l.changeQty < 0 ? "text-danger" : "text-muted";
+          const rawDate = l.createdAt || l.timestamp;
+          const d = rawDate ? new Date(rawDate) : new Date();
+          const qty = l.quantity !== undefined ? l.quantity : (l.changeQty || 0);
+          const isPositive = qty > 0;
+          const prod = prodMap[l.productId];
+          const imgSrc = prod ? this.getSupplyImage(prod) : DEFAULT_SUPPLY_IMG;
 
           html += `
             <tr>
-              <td>${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-              <td><strong>${l.productName}</strong></td>
-              <td class="${cls}"><strong>${sign}${l.changeQty}</strong></td>
-              <td>${l.previousStock}</td>
-              <td><strong>${l.newStock}</strong></td>
-              <td>${l.reason}</td>
-              <td>${l.user}</td>
+              <td><small class="text-muted">${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></td>
+              <td>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <img src="${imgSrc}" alt="${l.productName}" style="width:36px; height:36px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color);" onerror="this.src='${DEFAULT_SUPPLY_IMG}'">
+                  <b>${l.productName}</b>
+                </div>
+              </td>
+              <td><span class="badge-pill badge-active">${l.type || (isPositive ? 'RESTOCK' : 'ADJUST')}</span></td>
+              <td class="font-bold ${isPositive ? 'text-success' : 'text-danger'}">${isPositive ? '+' : ''}${qty}</td>
+              <td>${l.previousStock} &rarr; <b>${l.newStock}</b></td>
+              <td>${l.reason || ''} ${l.notes ? `<small class="text-muted">(${l.notes})</small>` : ''}</td>
+              <td>${l.userName || l.user || 'Staff'}</td>
             </tr>
           `;
         });
@@ -1048,39 +1852,87 @@
       },
 
       openAddSupplyModal() {
-        AdminPanel.openProductModal(false);
-        const isServiceEl = document.getElementById("prod-is-service");
-        if (isServiceEl) isServiceEl.value = "false";
-        AdminPanel.toggleServiceStockFields();
+        AdminPanel.openAddSupplyModal();
       },
 
       editSupplyItem(id) {
         AdminPanel.editProduct(id);
         const isServiceEl = document.getElementById("prod-is-service");
         if (isServiceEl) isServiceEl.value = "false";
-        AdminPanel.toggleServiceStockFields();
+        AdminPanel.toggleProductStockInputs();
       },
 
-      async saveSupplyItem(e) {
-        await AdminPanel.saveProduct(e);
-        this.refreshAll();
+      exportSuppliesCSV() {
+        const data = StorageManager.get();
+        const supplies = (data.products || []).filter(p => !p.isService);
+        if (supplies.length === 0) {
+          this.showToast("No supply items to export.", "warning");
+          return;
+        }
+        const rows = [
+          ["Supply Name", "Brand", "SKU", "Barcode", "Unit", "Unit Cost", "Current Stock", "Low Stock Threshold", "Status"]
+        ];
+        supplies.forEach(p => {
+          const stock = this.getSupplyStock(p);
+          const threshold = Number(p.lowStockThreshold) || 10;
+          const status = stock <= 0 ? "OUT OF STOCK" : (stock <= threshold ? "LOW STOCK" : "IN STOCK");
+          rows.push([
+            `"${(p.name || "").replace(/"/g, '""')}"`,
+            `"${(p.brand || "").replace(/"/g, '""')}"`,
+            `"${(p.sku || "").replace(/"/g, '""')}"`,
+            `"${(p.barcode || "").replace(/"/g, '""')}"`,
+            p.unit || "pc",
+            Number(p.costPrice || p.price || 0).toFixed(2),
+            stock,
+            threshold,
+            status
+          ]);
+        });
+        const csv = rows.map(r => r.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `supplies-inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showToast("Exported Supplies Inventory CSV!", "success");
       },
 
-      async submitStockAdjustment(e) {
-        await AdminPanel.saveStockAdjustment(e);
-        this.refreshAll();
-      },
-
-      async quickBarcodeStockUpdate(mode) {
-        await AdminPanel.quickBarcodeStockAction(mode);
-        this.refreshAll();
-      },
-
-      registerNewItemFromBarcode() {
-        AdminPanel.createNewProductFromBarcode();
-        const isServiceEl = document.getElementById("prod-is-service");
-        if (isServiceEl) isServiceEl.value = "false";
-        AdminPanel.toggleServiceStockFields();
+      exportLogsCSV() {
+        const data = StorageManager.get();
+        const logs = data.inventoryLogs || [];
+        if (logs.length === 0) {
+          this.showToast("No audit logs to export.", "warning");
+          return;
+        }
+        const rows = [
+          ["Date/Time", "Supply Item", "Type", "Quantity Change", "Previous Stock", "New Stock", "Reason", "Notes", "Staff"]
+        ];
+        logs.forEach(l => {
+          const dt = new Date(l.createdAt || l.timestamp || Date.now()).toLocaleString();
+          const qty = l.quantity !== undefined ? l.quantity : (l.changeQty || 0);
+          rows.push([
+            `"${dt}"`,
+            `"${(l.productName || "").replace(/"/g, '""')}"`,
+            l.type || "",
+            qty,
+            l.previousStock ?? "",
+            l.newStock ?? "",
+            `"${(l.reason || "").replace(/"/g, '""')}"`,
+            `"${(l.notes || "").replace(/"/g, '""')}"`,
+            `"${(l.userName || l.user || "").replace(/"/g, '""')}"`
+          ]);
+        });
+        const csv = rows.map(r => r.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `supplies-audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showToast("Exported Audit Logs CSV!", "success");
       },
 
       startHeartbeat() {
@@ -1169,9 +2021,10 @@
         this._isLoggingOut = true;
         if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
 
-        if (this.currentUser) {
-          const activeAttId = sessionStorage.getItem("POS_ACTIVE_ATTENDANCE_ID") || localStorage.getItem("POS_ACTIVE_ATTENDANCE_ID");
-          AttendanceManager.clockOut(this.currentUser.id, activeAttId);
+        if (this.currentUser && typeof AttendanceManager !== "undefined") {
+          if (typeof AttendanceManager.recordTimeOut === "function") {
+            AttendanceManager.recordTimeOut(this.currentUser);
+          }
           StorageManager.logoutSession(this.currentUser.id, this.currentSessionId);
         }
 
@@ -1222,10 +2075,11 @@
 
         const userToLogout = this.currentUser;
         const sessionToLogout = this.currentSessionId;
-        const activeAttId = sessionStorage.getItem("POS_ACTIVE_ATTENDANCE_ID") || localStorage.getItem("POS_ACTIVE_ATTENDANCE_ID");
 
-        if (userToLogout) {
-          AttendanceManager.clockOut(userToLogout.id, activeAttId);
+        if (userToLogout && typeof AttendanceManager !== "undefined") {
+          if (typeof AttendanceManager.recordTimeOut === "function") {
+            AttendanceManager.recordTimeOut(userToLogout);
+          }
         }
 
         this.currentUser = null;
@@ -1337,9 +2191,9 @@
         const modal = document.getElementById("modal-confirm");
         const titleEl = document.getElementById("confirm-title");
         const msgEl = document.getElementById("confirm-message");
-        const confirmBtn = document.getElementById("confirm-Action-btn");
+        const confirmBtn = document.getElementById("btn-confirm-ok");
 
-        if (titleEl) titleEl.innerHTML = `<i data-lucide="alert-triangle"></i> ${title}`;
+        if (titleEl) titleEl.textContent = title;
         if (msgEl) msgEl.textContent = message;
 
         const newBtn = confirmBtn.cloneNode(true);
@@ -1360,6 +2214,8 @@
       }
     };
 
+    window.InventorySite = InventorySite;
+
     // Provide global App compatibility for AdminPanel methods
     const App = {
       getCurrentUser: () => InventorySite.currentUser,
@@ -1379,4 +2235,3 @@
 </body>
 
 </html>
-
