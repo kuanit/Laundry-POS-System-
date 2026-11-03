@@ -1234,10 +1234,10 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Scripts -->
-  <script src="js/data.js"></script>
-  <script src="js/sound.js"></script>
+  <script src="js/data.js?v=4.2"></script>
+  <script src="js/sound.js?v=4.2"></script>
   <script src="js/laundry-splash.js"></script>
-  <script src="js/admin.js?v=3.5"></script>
+  <script src="js/admin.js?v=4.2"></script>
   <script>
     const DEFAULT_SUPPLY_IMG = "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80";
 
@@ -2113,7 +2113,27 @@
         window.location.replace("index.html");
       },
 
-      async logout() {
+      logout() {
+        this.confirmLogout();
+      },
+
+      confirmLogout() {
+        try {
+          if (typeof Sound !== "undefined" && typeof Sound.playClick === "function") {
+            Sound.playClick();
+          }
+        } catch (e) {}
+
+        this.showConfirmModal(
+          "Logout from Inventory Portal?",
+          "Are you sure you want to end your Inventory Manager session? Your attendance time-out will be recorded.",
+          async () => {
+            await this.performLogout();
+          }
+        );
+      },
+
+      async performLogout() {
         if (this._isLoggingOut) {
           window.location.replace("index.html");
           return;
@@ -2126,12 +2146,6 @@
 
         const userToLogout = this.currentUser;
         const sessionToLogout = this.currentSessionId;
-
-        try {
-          if (typeof Sound !== "undefined" && typeof Sound.playClick === "function") {
-            Sound.playClick();
-          }
-        } catch (e) {}
 
         try {
           if (userToLogout && typeof AttendanceManager !== "undefined" && typeof AttendanceManager.recordTimeOut === "function") {
@@ -2258,18 +2272,27 @@
         const modal = document.getElementById("modal-confirm");
         const titleEl = document.getElementById("confirm-title");
         const msgEl = document.getElementById("confirm-message");
-        const confirmBtn = document.getElementById("btn-confirm-ok");
+        const okBtn = document.getElementById("btn-confirm-ok");
+        const cancelBtn = document.getElementById("btn-confirm-cancel");
 
         if (titleEl) titleEl.textContent = title;
         if (msgEl) msgEl.textContent = message;
 
-        const newBtn = confirmBtn.cloneNode(true);
-        confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+        const close = () => {
+          if (modal) modal.classList.remove("active");
+          if (okBtn) okBtn.onclick = null;
+          if (cancelBtn) cancelBtn.onclick = null;
+        };
 
-        newBtn.addEventListener("click", () => {
-          this.closeConfirmModal();
-          if (typeof onConfirm === "function") onConfirm();
-        });
+        if (okBtn) {
+          okBtn.onclick = () => {
+            close();
+            if (typeof onConfirm === "function") onConfirm();
+          };
+        }
+        if (cancelBtn) {
+          cancelBtn.onclick = close;
+        }
 
         if (modal) modal.classList.add("active");
         if (window.lucide) lucide.createIcons();
