@@ -2591,6 +2591,53 @@ const AdminPanel = {
   /* =========================================================
      8. STAFF ACCOUNTS TAB
      ========================================================= */
+  formatRoleLabel(role) {
+    if (!role) return "STAFF";
+    if (role === "INVENTORY_MANAGER") return "INVENTORY MANAGER";
+    return String(role).replace(/_/g, " ");
+  },
+
+  setMaxDevicesPreset(val) {
+    const input = document.getElementById("user-max-devices");
+    if (input) {
+      input.value = val;
+      this.updateMaxDevicesBadge();
+    }
+  },
+
+  updateMaxDevicesBadge() {
+    const input = document.getElementById("user-max-devices");
+    const badge = document.getElementById("user-max-devices-badge");
+    if (!input || !badge) return;
+    const raw = parseInt(input.value, 10);
+    const val = isNaN(raw) || raw < 0 ? 1 : raw;
+    if (val === 0) {
+      badge.textContent = "Unlimited Devices";
+      badge.style.background = "rgba(16, 185, 129, 0.15)";
+      badge.style.borderColor = "rgba(16, 185, 129, 0.35)";
+      badge.style.color = "#10b981";
+    } else if (val === 1) {
+      badge.textContent = "1 Device Only";
+      badge.style.background = "rgba(56, 189, 248, 0.15)";
+      badge.style.borderColor = "rgba(56, 189, 248, 0.3)";
+      badge.style.color = "#38bdf8";
+    } else {
+      badge.textContent = `Up to ${val} Devices`;
+      badge.style.background = "rgba(245, 158, 11, 0.15)";
+      badge.style.borderColor = "rgba(245, 158, 11, 0.35)";
+      badge.style.color = "#f59e0b";
+    }
+  },
+
+  onUserRoleChange(role) {
+    const userId = document.getElementById("user-id")?.value;
+    const maxInput = document.getElementById("user-max-devices");
+    if (!userId && maxInput) {
+      maxInput.value = role === "ADMIN" ? 0 : 1;
+      this.updateMaxDevicesBadge();
+    }
+  },
+
   renderUsers() {
     const grid = document.getElementById("admin-users-grid");
     if (!grid) return;
@@ -2604,16 +2651,26 @@ const AdminPanel = {
       const isSelf = u.id === App.getCurrentUser()?.id;
       const isMaster = u.isMaster || u.id === "usr-admin";
       const isOwnerOrAdmin = isMaster || u.role === "ADMIN" || u.id === "usr-admin";
-      const isOnlineNow = u.isOnline && u.lastHeartbeat && (Date.now() - u.lastHeartbeat < 45000);
+      const activeSessions = StorageManager.getActiveSessions(u);
+      const activeCount = activeSessions.length;
+      const isOnlineNow = activeCount > 0;
+      const maxDevices = StorageManager.getMaxDevices(u);
       const isDisabled = u.status === "disabled";
 
       let deviceStatusBadge = "";
-      if (isOwnerOrAdmin) {
-        deviceStatusBadge = `<span class="badge badge-primary" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56, 189, 248, 0.3); color:#38bdf8;"><i data-lucide="layers" style="width:11px; height:11px;"></i> Multi-Device</span>`;
+      const limitLabel = maxDevices === 0 ? "Unlimited" : `${maxDevices} Max`;
+      if (isMaster) {
+        deviceStatusBadge = `<span class="badge badge-primary" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56, 189, 248, 0.3); color:#38bdf8;"><i data-lucide="layers" style="width:11px; height:11px;"></i> Unlimited Devices</span>`;
+      } else if (isOnlineNow) {
+        const countLabel = maxDevices === 0
+          ? `Active (${activeCount} / ∞ Devices)`
+          : `Active (${activeCount} / ${maxDevices} Device${maxDevices === 1 ? "" : "s"})`;
+        deviceStatusBadge = `<span class="badge badge-success" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.3); color:#22c55e;"><i data-lucide="radio" style="width:11px; height:11px;"></i> ${countLabel}</span>`;
       } else {
-        deviceStatusBadge = isOnlineNow
-          ? `<span class="badge badge-success" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.3); color:#22c55e;"><i data-lucide="radio" style="width:11px; height:11px;"></i> Active (1 Device)</span>`
-          : `<span class="badge badge-secondary" style="font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:rgba(148, 163, 184, 0.12); color:var(--text-muted);">Offline</span>`;
+        const offlineLabel = maxDevices === 0
+          ? `Offline (Unlimited)`
+          : `Offline (0 / ${maxDevices} Device${maxDevices === 1 ? "" : "s"})`;
+        deviceStatusBadge = `<span class="badge badge-secondary" style="font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:rgba(148, 163, 184, 0.12); color:var(--text-muted);" title="Allowed simultaneous logins: ${limitLabel}">${offlineLabel}</span>`;
       }
 
       let statusBadge = "";
@@ -2653,6 +2710,9 @@ const AdminPanel = {
         }
       }
 
+      const roleClass = (u.role || "CASHIER").toLowerCase().replace(/_/g, "-");
+      const roleLabel = this.formatRoleLabel(u.role);
+
       html += `
         <div class="user-account-card ${isMaster ? 'master-admin-card' : ''} ${isDisabled ? 'account-disabled' : ''}">
           <div class="user-card-header">
@@ -2668,14 +2728,14 @@ const AdminPanel = {
           <div class="user-card-body">
             <div class="user-meta-row">
               <span class="user-meta-label">Role:</span>
-              <span class="role-badge ${u.role.toLowerCase()}">${u.role}</span>
+              <span class="role-badge ${u.role.toLowerCase()} ${roleClass}">${roleLabel}</span>
             </div>
             <div class="user-meta-row">
               <span class="user-meta-label">Status:</span>
               ${statusBadge}
             </div>
             <div class="user-meta-row">
-              <span class="user-meta-label">Device:</span>
+              <span class="user-meta-label">Devices:</span>
               ${deviceStatusBadge}
             </div>
             ${autoDisableNotice}
@@ -2695,9 +2755,9 @@ const AdminPanel = {
                 </button>
               `}
             ` : ''}
-            ${!isOwnerOrAdmin && isOnlineNow && !isSelf ? `
-              <button type="button" class="btn btn-warning btn-sm" onclick="AdminPanel.forceDisconnectUser('${u.id}', '${u.fullName.replace(/'/g, "\\'")}')" title="Disconnect device to free login">
-                <i data-lucide="log-out"></i> Free Device
+            ${!isMaster && isOnlineNow && !isSelf ? `
+              <button type="button" class="btn btn-warning btn-sm" onclick="AdminPanel.forceDisconnectUser('${u.id}', '${u.fullName.replace(/'/g, "\\'")}')" title="Disconnect all active device sessions (${activeCount}) for this account">
+                <i data-lucide="log-out"></i> Free Device${activeCount > 1 ? `s (${activeCount})` : ""}
               </button>
             ` : ''}
             ${isMaster 
@@ -2735,14 +2795,14 @@ const AdminPanel = {
 
   forceDisconnectUser(userId, userName) {
     App.showConfirmModal(
-      `Free Device for ${userName}?`,
-      "This will immediately disconnect the active device session for this account so they can log in from another device.",
+      `Free Devices for ${userName}?`,
+      "This will immediately disconnect all active device sessions for this account so they can log in freshly.",
       async () => {
         try {
           await StorageManager.forceDisconnectUser(userId);
           this.renderUsers();
           Sound.playSuccess();
-          App.showToast(`Device session freed for ${userName}.`, "success");
+          App.showToast(`All device sessions freed for ${userName}.`, "success");
         } catch (err) {
           console.error("Force disconnect error:", err);
           Sound.playError();
@@ -2796,6 +2856,8 @@ const AdminPanel = {
     const pwdInput = document.getElementById("user-password");
     const roleSelect = document.getElementById("user-role");
     const statusSelect = document.getElementById("user-status");
+    const deviceLimitSection = document.getElementById("user-device-limit-section");
+    const maxDevicesInput = document.getElementById("user-max-devices");
     const autoDisableSection = document.getElementById("user-auto-disable-section");
     const autoDisableEnable = document.getElementById("user-autodisable-enable");
     const autoDisableNotice = document.getElementById("user-autodisable-info");
@@ -2807,7 +2869,7 @@ const AdminPanel = {
     if (pwdHelp) pwdHelp.style.display = isEdit ? "block" : "none";
     if (pwdInput) pwdInput.required = !isEdit;
 
-    // Lock role, status, and auto-disable for Master Admin
+    // Lock role, status, device limit, and auto-disable for Master Admin
     if (roleSelect) {
       roleSelect.disabled = isMaster;
       if (isMaster) roleSelect.value = "ADMIN";
@@ -2816,6 +2878,9 @@ const AdminPanel = {
       statusSelect.disabled = isMaster;
       if (isMaster) statusSelect.value = "active";
     }
+    if (deviceLimitSection) {
+      deviceLimitSection.style.display = isMaster ? "none" : "block";
+    }
     if (autoDisableSection) {
       autoDisableSection.style.display = isMaster ? "none" : "block";
     }
@@ -2823,8 +2888,15 @@ const AdminPanel = {
     if (!isEdit) {
       document.getElementById("user-form").reset();
       document.getElementById("user-id").value = "";
-      if (roleSelect) roleSelect.disabled = false;
+      if (roleSelect) {
+        roleSelect.disabled = false;
+        roleSelect.value = "CASHIER";
+      }
       if (statusSelect) statusSelect.disabled = false;
+      if (maxDevicesInput) {
+        maxDevicesInput.value = 1;
+        this.updateMaxDevicesBadge();
+      }
       if (autoDisableEnable) {
         autoDisableEnable.checked = false;
         this.toggleAutoDisableFields(false);
@@ -2854,6 +2926,12 @@ const AdminPanel = {
     document.getElementById("user-password").value = "";
     document.getElementById("user-role").value = u.role;
     document.getElementById("user-status").value = u.status;
+
+    const maxDevicesInput = document.getElementById("user-max-devices");
+    if (maxDevicesInput) {
+      maxDevicesInput.value = StorageManager.getMaxDevices(u);
+      this.updateMaxDevicesBadge();
+    }
 
     // Auto-disable configuration
     const enableCheckbox = document.getElementById("user-autodisable-enable");
@@ -2929,6 +3007,8 @@ const AdminPanel = {
       const autoDisableAt = document.getElementById("user-autodisable-datetime")?.value || null;
       const autoDisableDailyIn = document.getElementById("user-autodisable-daily-in")?.value || "08:00";
       const autoDisableDailyOut = document.getElementById("user-autodisable-daily-out")?.value || "17:00";
+      const rawMaxDevices = parseInt(document.getElementById("user-max-devices")?.value, 10);
+      const maxDevices = isMaster ? 0 : (isNaN(rawMaxDevices) || rawMaxDevices < 0 ? 1 : rawMaxDevices);
 
       const payload = {
         id: userId || "usr-" + Date.now(),
@@ -2937,6 +3017,7 @@ const AdminPanel = {
         role: isMaster ? "ADMIN" : document.getElementById("user-role").value,
         status: isMaster ? "active" : document.getElementById("user-status").value,
         isMaster: !!isMaster,
+        maxDevices: maxDevices,
         autoDisableEnabled: autoDisableEnabled,
         autoDisableType: autoDisableType,
         autoDisableAt: autoDisableAt,
@@ -3059,7 +3140,7 @@ const AdminPanel = {
         optHtml = `<option value="ALL">All Staff Members (0)</option>`;
       }
       users.forEach(u => {
-        optHtml += `<option value="${u.id}">${u.fullName} (${u.role})</option>`;
+        optHtml += `<option value="${u.id}">${u.fullName} (${this.formatRoleLabel(u.role)})</option>`;
       });
       staffSelect.innerHTML = optHtml;
       staffSelect.value = currentVal;
@@ -3248,7 +3329,7 @@ const AdminPanel = {
               </div>
             </div>
           </td>
-          <td><span class="role-badge ${(r.userRole || '').toLowerCase()}">${r.userRole || 'STAFF'}</span></td>
+          <td><span class="role-badge ${(r.userRole || '').toLowerCase()} ${(r.userRole || '').toLowerCase().replace(/_/g, '-')}">${this.formatRoleLabel(r.userRole)}</span></td>
           <td><span class="font-mono text-muted"><i data-lucide="log-in" style="width:13px; height:13px; vertical-align:middle;"></i> ${timeInFmt}</span></td>
           <td><span class="font-mono text-muted">${timeOutFmt}</span></td>
           <td><strong>${durationFmt}</strong></td>
@@ -3365,7 +3446,7 @@ const AdminPanel = {
             <div class="avatar-circle small" style="width:26px; height:26px; font-size:0.7rem;">${initials}</div>
             <div>
               <div>${u.fullName}</div>
-              <small class="text-muted" style="font-size:0.7rem;">${u.role}</small>
+              <small class="text-muted" style="font-size:0.7rem;">${this.formatRoleLabel(u.role)}</small>
             </div>
           </div>
         </td>
@@ -3390,7 +3471,7 @@ const AdminPanel = {
     const data = StorageManager.get();
     const users = data.users || [];
     if (userSelect) {
-      userSelect.innerHTML = users.map(u => `<option value="${u.id}">${u.fullName} (${u.role})</option>`).join("");
+      userSelect.innerHTML = users.map(u => `<option value="${u.id}">${u.fullName} (${this.formatRoleLabel(u.role)})</option>`).join("");
     }
 
     if (recordId) {

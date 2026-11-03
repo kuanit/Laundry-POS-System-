@@ -104,6 +104,32 @@ const StorageManager = {
     }
   },
 
+  getActiveSessions(u, timeoutMs = 45000) {
+    if (!u) return [];
+    const now = Date.now();
+    let sessions = Array.isArray(u.activeSessions) ? [...u.activeSessions] : [];
+    if (u.activeSessionId && u.lastHeartbeat && (now - u.lastHeartbeat < timeoutMs)) {
+      if (!sessions.some(s => s && s.sessionId === u.activeSessionId)) {
+        sessions.push({
+          sessionId: u.activeSessionId,
+          lastHeartbeat: u.lastHeartbeat,
+          loginAt: u.lastLoginAt || new Date().toISOString()
+        });
+      }
+    }
+    return sessions.filter(s => s && s.sessionId && s.lastHeartbeat && (now - s.lastHeartbeat < timeoutMs));
+  },
+
+  getMaxDevices(u) {
+    if (!u) return 1;
+    if (u.maxDevices !== undefined && u.maxDevices !== null && u.maxDevices !== '') {
+      const parsed = parseInt(u.maxDevices, 10);
+      if (!isNaN(parsed) && parsed >= 0) return parsed;
+    }
+    const isOwnerOrAdmin = u.isMaster || u.role === 'ADMIN' || u.id === 'usr-admin';
+    return isOwnerOrAdmin ? 0 : 1; // 0 = Unlimited
+  },
+
   checkAutoDisableUsers(data) {
     if (!data || !Array.isArray(data.users)) return false;
     let modified = false;
@@ -135,6 +161,7 @@ const StorageManager = {
             const disableTime = new Date(u.autoDisableAt).getTime();
             if (!isNaN(disableTime) && Date.now() >= disableTime) {
               u.status = 'disabled';
+              u.activeSessions = [];
               u.activeSessionId = null;
               u.lastHeartbeat = null;
               u.isOnline = false;
@@ -173,6 +200,7 @@ const StorageManager = {
           } else {
             if (u.status !== 'disabled') {
               u.status = 'disabled';
+              u.activeSessions = [];
               u.activeSessionId = null;
               u.lastHeartbeat = null;
               u.isOnline = false;
@@ -330,8 +358,13 @@ const StorageManager = {
     }
     const currentData = this.get();
     currentData.users = result.users || [];
+    const added = currentData.users.find(u => u.id === result.user?.id || u.username === userData.username);
+    if (added && userData.maxDevices !== undefined) {
+      added.maxDevices = userData.maxDevices;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-    return result.user;
+    this.pushToServer(currentData).catch(() => {});
+    return added || result.user;
   },
 
   async updateUser(userId, updates) {
@@ -346,8 +379,13 @@ const StorageManager = {
     }
     const currentData = this.get();
     currentData.users = result.users || [];
+    const updated = currentData.users.find(u => u.id === userId);
+    if (updated && updates.maxDevices !== undefined) {
+      updated.maxDevices = updates.maxDevices;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-    return result.user;
+    this.pushToServer(currentData).catch(() => {});
+    return updated || result.user;
   },
 
   async updateUserTheme(userId, theme) {
@@ -424,9 +462,22 @@ const StorageManager = {
       if (Array.isArray(currentData.users)) {
         const u = currentData.users.find(x => x.id === userId || x.username === userId);
         if (u) {
-          u.activeSessionId = null;
-          u.lastHeartbeat = null;
-          u.isOnline = false;
+          if (Array.isArray(u.activeSessions) && sessionId) {
+            u.activeSessions = u.activeSessions.filter(s => s && s.sessionId !== sessionId);
+          } else if (!sessionId) {
+            u.activeSessions = [];
+          }
+          const remaining = this.getActiveSessions(u);
+          u.activeSessions = remaining;
+          if (remaining.length > 0) {
+            u.isOnline = true;
+            u.activeSessionId = remaining[remaining.length - 1].sessionId;
+            u.lastHeartbeat = Math.max(...remaining.map(s => s.lastHeartbeat));
+          } else {
+            u.activeSessionId = null;
+            u.lastHeartbeat = null;
+            u.isOnline = false;
+          }
           localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
         }
       }
@@ -450,6 +501,7 @@ const StorageManager = {
     if (Array.isArray(currentData.users)) {
       const target = currentData.users.find(u => u.id === targetUserId || u.username === targetUserId);
       if (target) {
+        target.activeSessions = [];
         target.activeSessionId = null;
         target.lastHeartbeat = null;
         target.isOnline = false;

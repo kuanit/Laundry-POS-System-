@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Dirty Clothes — Inventory Manager Portal</title>
+  <meta name="description" content="Dedicated Supplies & Stock Inventory Management Portal for Dirty Clothes Laundry Shop.">
+
+  <!-- PWA & Mobile App Capabilities -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Dirty Clothes Inv">
+
+  <!-- App Icons -->
+  <link rel="icon" type="image/svg+xml" href="img/app-icon.svg">
+  <link rel="apple-touch-icon" href="img/app-icon.svg">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- HTML5 QRCode Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <!-- Quagga2 Industrial Barcode Scanner Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+  <!-- ZXing Barcode Scanner Engine -->
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css?v=3.4">
+  <style>
+    .inv-portal-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: var(--bg-app);
+      color: var(--text-primary);
+    }
+
+    .inv-portal-body {
+      flex: 1;
+      padding: 24px 28px 48px;
+      max-width: 1480px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .inv-role-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 18px 22px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.14), rgba(14, 165, 233, 0.05));
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .inv-role-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .inv-role-icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(56, 189, 248, 0.16);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .inv-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .inv-view-tabs {
+      display: inline-flex;
+      gap: 6px;
+      background: var(--bg-surface);
+      padding: 5px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .inv-view-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .inv-view-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+
+    .inv-view-tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+
+    @media (max-width: 768px) {
+      .inv-portal-body {
+        padding: 14px 12px 36px;
+      }
+      .inv-role-banner {
+        padding: 14px 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <section class="inv-portal-wrapper">
+    <!-- Top Header -->
+    <header class="pos-header">
+      <div class="header-left">
+        <div class="brand-logo small">
+          <img class="brand-custom-logo" alt="Store Logo" style="display:none; width:100%; height:100%; object-fit:contain; border-radius:inherit;" />
+          <i data-lucide="boxes" class="brand-default-icon"></i>
+        </div>
+        <div class="brand-info">
+          <h2 class="store-name">Dirty Clothes</h2>
+          <span class="pos-terminal-tag" style="color:#38bdf8; font-weight:700;">Inventory Manager Portal</span>
+        </div>
+        <div class="live-clock" id="inv-clock">00:00:00 AM</div>
+      </div>
+
+      <div class="header-center">
+        <div class="inv-view-tabs">
+          <button type="button" class="inv-view-tab active" id="inv-tab-btn-stock" onclick="InventorySite.switchSection('stock')">
+            <i data-lucide="package" style="width:16px; height:16px;"></i>
+            <span>Supplies & Stock</span>
+          </button>
+          <button type="button" class="inv-view-tab" id="inv-tab-btn-logs" onclick="InventorySite.switchSection('logs')">
+            <i data-lucide="clipboard-list" style="width:16px; height:16px;"></i>
+            <span>Audit History</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <a href="admin.html" id="inv-back-to-admin-btn" class="btn btn-secondary btn-sm" style="display:none;" title="Return to Admin Control Center">
+          <i data-lucide="shield"></i>
+          <span>Admin Panel</span>
+        </a>
+
+        <!-- Theme Switcher -->
+        <button type="button" class="icon-btn" id="btn-theme-toggle" onclick="InventorySite.toggleTheme()" title="Switch Light/Dark Theme">
+          <i data-lucide="sun" id="theme-icon"></i>
+        </button>
+
+        <!-- Sound Toggle -->
+        <button type="button" class="icon-btn" id="btn-sound-toggle" onclick="InventorySite.toggleSound()" title="Toggle Audio">
+          <i data-lucide="volume-2" id="sound-icon"></i>
+        </button>
+
+        <!-- User Badge + Shift Status -->
+        <div class="user-badge" id="inv-user-badge">
+          <div class="user-avatar" id="inv-user-avatar" style="background:linear-gradient(135deg,#0284c7,#06b6d4);">IM</div>
+          <div class="user-details">
+            <span class="user-name" id="inv-user-name">Inventory Manager</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="user-role" id="inv-user-role">INVENTORY MANAGER</span>
+              <span id="inv-attendance-badge" class="badge badge-success" style="font-size:0.65rem; padding:1px 6px; display:inline-flex; align-items:center; gap:3px;" title="Automatically clocked in on login">
+                <i data-lucide="clock" style="width:10px; height:10px;"></i>
+                <span id="inv-attendance-time">Clocked In</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-danger btn-sm" onclick="InventorySite.logout()" title="Logout & Record Time-Out">
+          <i data-lucide="log-out"></i>
+          <span class="hide-sm">Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="inv-portal-body">
+      <!-- Welcome / Quick Action Banner -->
+      <div class="inv-role-banner">
+        <div class="inv-role-banner-left">
+          <div class="inv-role-icon-box">
+            <i data-lucide="warehouse" style="width:24px; height:24px;"></i>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <h2 style="margin:0; font-size:1.2rem; font-weight:800;">Supplies & Stock Control Center</h2>
+              <span class="role-badge inventory_manager inventory-manager">INVENTORY MANAGER EXCLUSIVE</span>
+            </div>
+            <p class="text-muted" style="margin:4px 0 0; font-size:0.84rem;">
+              Monitor detergent, fabric conditioner, bleach, laundry bags, and shop consumables. Scan barcodes to restock or deduct items with full audit logging.
+            </p>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-secondary" onclick="AdminPanel.openBarcodeDetectorModal()" style="border-color:var(--primary); color:var(--primary);">
+            <i data-lucide="scan-barcode"></i> Scan Item Barcode
+          </button>
+          <button type="button" class="btn btn-primary" onclick="InventorySite.openAddSupplyModal()">
+            <i data-lucide="plus"></i> Add Supply / Detergent
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="inv-kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon blue"><i data-lucide="package"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-label">Total Supply Items</span>
+            <h3 class="kpi-value" id="inv-kpi-total-items">0</h3>
+            <span class="kpi-subtext">Registered physical supplies</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon green"><i data-lucide="layers"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-label">Total Units in Stock</span>
+            <h3 class="kpi-value" id="inv-kpi-total-units">0</h3>
+            <span class="kpi-subtext">Combined stock count</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon orange"><i data-lucide="alert-triangle"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-label">Low Stock Alerts</span>
+            <h3 class="kpi-value" id="inv-kpi-low-stock">0</h3>
+            <span class="kpi-subtext">At or below alert threshold</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon purple" style="background:rgba(239, 68, 68, 0.14); color:#ef4444;"><i data-lucide="package-x"></i></div>
+          <div class="kpi-info">
+            <span class="kpi-label">Out of Stock</span>
+            <h3 class="kpi-value" id="inv-kpi-out-stock">0</h3>
+            <span class="kpi-subtext">Requires immediate restocking</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Low Stock Warning Banner -->
+      <div id="low-stock-alert-banner" class="alert-banner warning" style="display:none;">
+        <i data-lucide="alert-triangle"></i>
+        <div class="alert-content">
+          <strong>Low Supplies Alert!</strong>
+          <span id="low-stock-alert-text">Some detergents or supplies are running low.</span>
+        </div>
+      </div>
+
+      <!-- SECTION 1: SUPPLIES & STOCK TABLE -->
+      <div id="inv-section-stock">
+        <div class="tab-toolbar" style="margin-bottom:16px;">
+          <div class="toolbar-left" style="display:flex; gap:10px; flex-wrap:wrap; flex:1;">
+            <div class="search-box" style="min-width:260px; flex:1; max-width:420px;">
+              <i data-lucide="search"></i>
+              <input type="text" id="inv-search-input" placeholder="Search supply name, brand, SKU, or barcode..."
+                oninput="InventorySite.renderSuppliesTable()">
+            </div>
+            <select id="inv-stock-filter" class="select-input" onchange="InventorySite.renderSuppliesTable()">
+              <option value="ALL">All Supplies</option>
+              <option value="LOW">Low Stock Only</option>
+              <option value="OUT">Out of Stock Only</option>
+              <option value="HEALTHY">In Stock (Healthy)</option>
+            </select>
+          </div>
+          <div class="toolbar-right" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" onclick="AdminPanel.exportInventoryCSV()">
+              <i data-lucide="download"></i> Export Stock CSV
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="AdminPanel.openInventoryLogsModal()">
+              <i data-lucide="history"></i> Quick Logs Modal
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0; display:flex; align-items:center; gap:8px;">
+              <i data-lucide="boxes" style="width:18px; height:18px; color:var(--primary);"></i>
+              <span>Physical Laundry Supplies & Consumables</span>
+            </h4>
+            <span class="text-muted" id="inv-table-count-label" style="font-size:0.82rem;">Showing 0 items</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Supply Item</th>
+                  <th>Brand</th>
+                  <th>SKU / Barcode</th>
+                  <th>Unit Price</th>
+                  <th>Current Stock</th>
+                  <th>Alert Threshold</th>
+                  <th>Status</th>
+                  <th class="text-right">Stock Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-inventory-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: FULL AUDIT HISTORY -->
+      <div id="inv-section-logs" style="display:none;">
+        <div class="tab-toolbar" style="margin-bottom:16px;">
+          <div class="toolbar-left" style="display:flex; gap:10px; flex-wrap:wrap; flex:1;">
+            <div class="search-box" style="min-width:260px; flex:1; max-width:420px;">
+              <i data-lucide="search"></i>
+              <input type="text" id="inv-log-search" placeholder="Search logs by item name, reason, or staff..."
+                oninput="InventorySite.renderInlineLogs()">
+            </div>
+          </div>
+          <div class="toolbar-right">
+            <button type="button" class="btn btn-secondary" onclick="AdminPanel.exportInventoryLogsCSV()">
+              <i data-lucide="download"></i> Export Audit Logs CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h4 style="margin:0; display:flex; align-items:center; gap:8px;">
+              <i data-lucide="clipboard-list" style="width:18px; height:18px; color:var(--primary);"></i>
+              <span>Supplies Stock Movement & Audit History</span>
+            </h4>
+            <span class="text-muted" id="inv-logs-count-label" style="font-size:0.82rem;">0 log entries</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Supply Item</th>
+                  <th>Change</th>
+                  <th>Previous</th>
+                  <th>New Stock</th>
+                  <th>Reason</th>
+                  <th>Logged By</th>
+                </tr>
+              </thead>
+              <tbody id="inv-inline-logs-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Add / Edit Supply Modal -->
+  <div id="modal-product-form" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="product-modal-title"><i data-lucide="package-plus"></i> Add Laundry Supply</h3>
+        <button type="button" class="icon-btn" onclick="AdminPanel.closeProductModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="product-form" onsubmit="InventorySite.saveSupplyItem(event)">
+        <div class="modal-body">
+          <input type="hidden" id="prod-id">
+          <div class="form-grid">
+            <div class="form-group span-2">
+              <label>Supply Name *</label>
+              <input type="text" id="prod-name" class="form-input" placeholder="e.g., Ariel Liquid Detergent 1L" required>
+            </div>
+            <div class="form-group">
+              <label>Category *</label>
+              <select id="prod-category" class="select-input" required></select>
+            </div>
+            <div class="form-group">
+              <label>Brand / Variant</label>
+              <input type="text" id="prod-brand" class="form-input" placeholder="e.g., Downy / Ariel / Breeze">
+            </div>
+            <div class="form-group">
+              <label>Unit Price (₱) *</label>
+              <input type="number" id="prod-price" class="form-input" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label>SKU / Barcode *</label>
+              <div style="display:flex; gap:6px;">
+                <input type="text" id="prod-sku" class="form-input" placeholder="e.g., DET-101" required style="flex:1;">
+                <button type="button" class="btn btn-secondary" onclick="AdminPanel.openProductSkuScanner()" title="Scan Barcode with Camera" style="padding:0 12px;">
+                  <i data-lucide="camera"></i> Scan
+                </button>
+              </div>
+              <div id="prod-sku-scanner-wrap" style="display:none; margin-top:8px; border-radius:10px; overflow:hidden; border:2px solid var(--primary); background:#000; position:relative;">
+                <div id="prod-sku-reader" style="width:100%; min-height:200px;"></div>
+                <button type="button" class="btn btn-danger btn-sm" onclick="AdminPanel.closeProductSkuScanner()" style="position:absolute; top:8px; right:8px; z-index:10;">
+                  <i data-lucide="x"></i> Close Camera
+                </button>
+              </div>
+            </div>
+            <div class="form-group" style="display:none;">
+              <label>Item Type</label>
+              <select id="prod-is-service" class="select-input">
+                <option value="false" selected>Physical Supply (Track Stock)</option>
+                <option value="true">Laundry Service (No Stock)</option>
+              </select>
+            </div>
+            <div class="form-group" id="prod-stock-group">
+              <label>Initial / Current Stock</label>
+              <input type="number" id="prod-stock" class="form-input" min="0" value="20">
+            </div>
+            <div class="form-group" id="prod-threshold-group">
+              <label>Low Stock Alert Threshold</label>
+              <input type="number" id="prod-threshold" class="form-input" min="1" value="10">
+            </div>
+            <div class="form-group">
+              <label>Theme Color</label>
+              <input type="color" id="prod-color" class="form-input color-input" value="#0284c7">
+            </div>
+            <div class="form-group span-2">
+              <label>Supply Image (Optional)</label>
+              <div class="image-upload-wrapper">
+                <div id="prod-image-preview" class="image-preview-box">
+                  <i data-lucide="image"></i>
+                  <span>No Image</span>
+                </div>
+                <div class="image-upload-controls">
+                  <input type="file" id="prod-image-input" accept="image/*" style="display:none"
+                    onchange="AdminPanel.handleImageUpload(event)">
+                  <input type="hidden" id="prod-image-data">
+                  <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="document.getElementById('prod-image-input').click()">
+                    <i data-lucide="upload"></i> Choose Photo
+                  </button>
+                  <button type="button" class="btn btn-danger btn-sm" id="btn-remove-image" style="display:none"
+                    onclick="AdminPanel.removeProductImage()">
+                    <i data-lucide="trash-2"></i> Remove
+                  </button>
+                  <small class="text-muted">Auto-compressed for fast loading (Max 300px)</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeProductModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> Save Supply Item
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Adjust Inventory Stock Modal -->
+  <div id="modal-inventory-adjust" class="modal-overlay">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3><i data-lucide="package-plus"></i> Adjust Supply Stock</h3>
+        <button type="button" class="icon-btn" onclick="AdminPanel.closeAdjustModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="inventory-adjust-form" onsubmit="InventorySite.submitStockAdjustment(event)">
+        <div class="modal-body">
+          <input type="hidden" id="adj-prod-id">
+          <h4 id="adj-prod-name" class="mb-2">Supply Name</h4>
+          <p class="text-muted mb-3">Current Stock: <strong id="adj-current-stock">0</strong></p>
+
+          <div class="form-group">
+            <label>Adjustment Type</label>
+            <select id="adj-type" class="select-input">
+              <option value="add">Restock (+ Add Supplies)</option>
+              <option value="deduct">Deduct (- Used / Damaged)</option>
+              <option value="set">Set Exact Stock Count (=)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity *</label>
+            <input type="number" id="adj-qty" class="form-input" min="1" value="1" required>
+          </div>
+          <div class="form-group">
+            <label>Reason / Note</label>
+            <input type="text" id="adj-reason" class="form-input" placeholder="e.g., Weekly detergent delivery" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeAdjustModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Barcode Scanner & Auto-Detector Modal -->
+  <div id="modal-barcode-detector" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="scan-barcode"></i> Barcode Scanner & Item Detector</h3>
+        <button type="button" class="icon-btn" onclick="AdminPanel.closeBarcodeDetectorModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" id="btn-bc-camera-toggle" class="btn btn-primary btn-sm" onclick="AdminPanel.toggleBarcodeCamera()">
+              <i data-lucide="camera"></i> Use Camera Scanner
+            </button>
+            <button type="button" id="btn-bc-switch-cam" class="btn btn-secondary btn-sm" style="display:none;" onclick="AdminPanel.switchBarcodeCamera()" title="Switch Front/Back Camera">
+              <i data-lucide="refresh-cw"></i> Switch Camera
+            </button>
+            <button type="button" id="btn-bc-torch" class="btn btn-secondary btn-sm" style="display:none;" onclick="AdminPanel.toggleBarcodeTorch()" title="Toggle Flashlight">
+              <i data-lucide="zap"></i> Flash
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('bc-image-file-input').click()" title="Scan barcode from photo">
+              <i data-lucide="image"></i> Scan Photo
+            </button>
+            <input type="file" id="bc-image-file-input" accept="image/*" capture="environment" style="display:none;" onchange="AdminPanel.scanBarcodeFromImage(event)">
+          </div>
+          <span id="bc-scanner-status" class="badge badge-secondary">USB / Manual Mode</span>
+        </div>
+
+        <div id="bc-camera-Select-row" style="display:none; margin-bottom:10px;">
+          <select id="bc-camera-select" class="select-input" style="width:100%; font-size:0.82rem; padding:6px 10px;" onchange="AdminPanel.onSelectBarcodeCamera(this.value)">
+          </select>
+        </div>
+
+        <div id="bc-camera-container" style="display:none; margin-bottom:14px; border-radius:12px; overflow:hidden; border:2px solid var(--primary); background:#000; position:relative;">
+          <div id="bc-camera-reader" style="width:100%; min-height:240px;"></div>
+          <div style="text-align:center; padding:6px 10px; font-size:0.75rem; color:#38bdf8; background:rgba(2,132,199,0.15); display:flex; justify-content:space-between; align-items:center;">
+            <span>Hold barcode steady 10–15cm from camera</span>
+            <span id="bc-engine-badge" style="font-size:0.68rem; opacity:0.85;">Multi-Engine HD</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Scan or Type Barcode / SKU</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="barcode-detector-input" class="form-input" placeholder="Scan with USB scanner, camera, or type barcode..." autofocus
+              onkeydown="if(event.key==='Enter'){ event.preventDefault(); AdminPanel.lookupBarcodeItem(); }">
+            <button type="button" class="btn btn-primary" onclick="AdminPanel.lookupBarcodeItem()">
+              <i data-lucide="search"></i> Detect
+            </button>
+          </div>
+          <small class="text-muted">Supports USB laser scanners, mobile/webcam cameras, and manual SKU entry.</small>
+        </div>
+
+        <!-- Detected Item Card -->
+        <div id="barcode-detected-result" style="display:none; margin-top:16px; padding:16px; border-radius:12px; background:var(--bg-surface-elevated, rgba(2,132,199,0.08)); border:1px solid var(--border);">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+            <div>
+              <span class="badge badge-success" id="bc-det-status-badge" style="margin-bottom:4px; display:inline-block;">ITEM MATCHED</span>
+              <h4 id="bc-det-name" style="margin:0; font-size:1.1rem;">Product Name</h4>
+              <small class="text-muted" id="bc-det-meta">Brand • SKU • Category</small>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.75rem; color:var(--text-muted);">Current Stock</div>
+              <div id="bc-det-stock" style="font-size:1.5rem; font-weight:800; color:var(--primary);">0</div>
+            </div>
+          </div>
+
+          <div id="bc-det-stock-controls" style="border-top:1px solid var(--border); padding-top:12px; margin-top:8px;">
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:8px;">Quick Stock Action (Auto-logs to Supplies History)</label>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input type="number" id="bc-det-qty" class="form-input" value="1" min="1" style="width:90px;">
+              <input type="text" id="bc-det-reason" class="form-input" placeholder="Note (e.g., Barcode restock / usage)" style="flex:1; min-width:160px;">
+              <button type="button" class="btn btn-success btn-sm" onclick="InventorySite.quickBarcodeStockUpdate('add')">
+                <i data-lucide="plus"></i> Restock (+Add)
+              </button>
+              <button type="button" class="btn btn-warning btn-sm" onclick="InventorySite.quickBarcodeStockUpdate('deduct')">
+                <i data-lucide="minus"></i> Use (-Deduct)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Not Found State -->
+        <div id="barcode-not-found" style="display:none; margin-top:16px; padding:16px; border-radius:12px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3);">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <i data-lucide="help-circle" style="color:var(--danger); width:22px; height:22px;"></i>
+            <div>
+              <strong style="display:block;">Barcode Not Registered Yet</strong>
+              <small class="text-muted" id="bc-not-found-code">Code: ---</small>
+            </div>
+          </div>
+          <p style="font-size:0.83rem; margin-bottom:12px;" class="text-muted">Would you like to register this barcode as a new supply item?</p>
+          <button type="button" class="btn btn-primary btn-sm" onclick="InventorySite.registerNewItemFromBarcode()">
+            <i data-lucide="plus"></i> Register New Supply with This Barcode
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeBarcodeDetectorModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supplies Audit Logs Modal -->
+  <div id="modal-inventory-logs" class="modal-overlay">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3><i data-lucide="clipboard-list"></i> Supplies Audit Logs</h3>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.exportInventoryLogsCSV()">
+            <i data-lucide="download"></i> Export CSV
+          </button>
+          <button type="button" class="icon-btn" onclick="AdminPanel.closeInventoryLogsModal()">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date/Time</th>
+                <th>Supply Item</th>
+                <th>Change</th>
+                <th>Prev</th>
+                <th>New</th>
+                <th>Reason</th>
+                <th>User</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-logs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Confirm Modal -->
+  <div id="modal-confirm" class="modal-overlay">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="confirm-title"><i data-lucide="alert-circle"></i> Confirm Action</h3>
+        <button type="button" class="icon-btn" onclick="InventorySite.closeConfirmModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message">Are you sure you want to proceed?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="InventorySite.closeConfirmModal()">Cancel</button>
+        <button type="button" id="confirm-Action-btn" class="btn btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Forced-Logout / Disabled Modal -->
+  <div id="modal-admin-timeout" class="modal-overlay" style="z-index: 99999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px);">
+    <div class="modal-card modal-sm" style="border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); text-align: center; padding: 28px 24px;">
+      <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 2px solid rgba(245, 158, 11, 0.4); color: #f59e0b; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+        <i data-lucide="clock" style="width: 32px; height: 32px;"></i>
+      </div>
+      <h3 id="admin-timeout-title" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; color: var(--text-primary);">Session Ended</h3>
+      <p id="admin-timeout-msg" class="text-muted" style="font-size: 0.92rem; line-height: 1.5; margin-bottom: 20px;">
+        Your session was ended by an Administrator.
+      </p>
+      <div style="background: rgba(2, 132, 199, 0.1); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 0.82rem; color: #38bdf8;">
+        Redirecting to Login Screen in <strong id="admin-timeout-countdown">4</strong> seconds...
+      </div>
+      <button type="button" class="btn btn-primary btn-block" onclick="InventorySite.completeForceLogoutRedirect()" style="width: 100%; justify-content: center;">
+        <i data-lucide="log-in"></i> Return to Login Now
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/laundry-splash.js"></script>
+  <script src="js/admin.js?v=3.4"></script>
+  <script>
+    const InventorySite = {
+      currentUser: null,
+      currentSessionId: null,
+      _isLoggingOut: false,
+      _heartbeatTimer: null,
+      activeSection: "stock",
+
+      init() {
+        Sound.init();
+        this.checkAuth();
+        this.initTheme();
+        this.startLiveClock();
+        this.startHeartbeat();
+        this.setupUnloadBeacon();
+
+        // Populate category select in Add/Edit Supply modal
+        AdminPanel.populateCategorySelect();
+        this.refreshAll();
+
+        // Listen for real-time sync updates
+        window.addEventListener("pos-data-synced", (e) => {
+          this.validateSessionState(e.detail);
+          this.refreshAll();
+        });
+
+        // Periodic session validation (every 3 seconds)
+        setInterval(() => {
+          this.validateSessionState();
+        }, 3000);
+
+        if (window.lucide) lucide.createIcons();
+      },
+
+      checkAuth() {
+        const stored = sessionStorage.getItem("POS_ACTIVE_USER") || localStorage.getItem("POS_ACTIVE_USER");
+        if (stored) {
+          try {
+            this.currentUser = JSON.parse(stored);
+          } catch (e) {}
+        }
+
+        this.currentSessionId = sessionStorage.getItem("POS_ACTIVE_SESSION_ID") || localStorage.getItem("POS_ACTIVE_SESSION_ID");
+
+        if (!this.currentUser || !this.currentUser.id) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        // Only INVENTORY_MANAGER (and ADMIN previewing) can access inventory.html
+        if (this.currentUser.role === "CASHIER") {
+          window.location.href = "pos.html";
+          return;
+        }
+
+        // Verify current user against database
+        const data = StorageManager.get();
+        const dbUser = (data.users || []).find(u => u.id === this.currentUser.id);
+        if (dbUser && dbUser.status === "disabled") {
+          this.forceLogout(dbUser.autoDisableReason || "Your account has been disabled.");
+          return;
+        }
+
+        // Ensure Attendance Time-In is active for Inventory Manager
+        if (this.currentUser.role === "INVENTORY_MANAGER") {
+          let activePunch = AttendanceManager.getActiveRecordForUser(this.currentUser.id);
+          if (!activePunch) {
+            activePunch = AttendanceManager.clockIn(this.currentUser);
+          }
+          if (activePunch && activePunch.id) {
+            sessionStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", activePunch.id);
+            localStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", activePunch.id);
+          }
+        }
+
+        this.updateHeader();
+      },
+
+      updateHeader() {
+        if (!this.currentUser) return;
+        const nameEl = document.getElementById("inv-user-name");
+        const roleEl = document.getElementById("inv-user-role");
+        const avatarEl = document.getElementById("inv-user-avatar");
+        const backAdminBtn = document.getElementById("inv-back-to-admin-btn");
+
+        if (nameEl) nameEl.textContent = this.currentUser.fullName;
+        if (roleEl) {
+          roleEl.textContent = this.currentUser.role === "INVENTORY_MANAGER" ? "INVENTORY MANAGER" : this.currentUser.role;
+        }
+        if (avatarEl) {
+          const initials = this.currentUser.fullName
+            .split(" ")
+            .map(n => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
+          avatarEl.textContent = initials;
+        }
+        if (backAdminBtn) {
+          backAdminBtn.style.display = this.currentUser.role === "ADMIN" ? "inline-flex" : "none";
+        }
+
+        const data = StorageManager.get();
+        if (data && data.settings) {
+          const storeEls = document.querySelectorAll(".store-name");
+          storeEls.forEach(el => {
+            if (data.settings.storeName) el.textContent = data.settings.storeName;
+          });
+          this.applyCustomLogo(data.settings.storeLogo);
+        }
+
+        this.updateAttendanceBadge();
+      },
+
+      updateAttendanceBadge() {
+        if (!this.currentUser) return;
+        const badgeEl = document.getElementById("inv-attendance-badge");
+        const timeEl = document.getElementById("inv-attendance-time");
+        if (!badgeEl || !timeEl) return;
+
+        const activeRec = AttendanceManager.getActiveRecordForUser(this.currentUser.id);
+        if (activeRec && activeRec.timeIn) {
+          const t = new Date(activeRec.timeIn).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true
+          });
+          timeEl.textContent = `In: ${t}`;
+          badgeEl.style.display = "inline-flex";
+        } else {
+          timeEl.textContent = "On Duty";
+        }
+      },
+
+      applyCustomLogo(logoData) {
+        const imgs = document.querySelectorAll(".brand-custom-logo");
+        const icons = document.querySelectorAll(".brand-default-icon");
+        imgs.forEach(img => {
+          if (logoData) {
+            img.src = logoData;
+            img.style.display = "block";
+          } else {
+            img.removeAttribute("src");
+            img.style.display = "none";
+          }
+        });
+        icons.forEach(icon => {
+          icon.style.display = logoData ? "none" : "";
+        });
+      },
+
+      switchSection(section) {
+        this.activeSection = section;
+        const stockSec = document.getElementById("inv-section-stock");
+        const logsSec = document.getElementById("inv-section-logs");
+        const stockBtn = document.getElementById("inv-tab-btn-stock");
+        const logsBtn = document.getElementById("inv-tab-btn-logs");
+
+        if (section === "logs") {
+          if (stockSec) stockSec.style.display = "none";
+          if (logsSec) logsSec.style.display = "block";
+          if (stockBtn) stockBtn.classList.remove("active");
+          if (logsBtn) logsBtn.classList.add("active");
+          this.renderInlineLogs();
+        } else {
+          if (stockSec) stockSec.style.display = "block";
+          if (logsSec) logsSec.style.display = "none";
+          if (stockBtn) stockBtn.classList.add("active");
+          if (logsBtn) logsBtn.classList.remove("active");
+          this.renderSuppliesTable();
+        }
+        Sound.playClick();
+        if (window.lucide) lucide.createIcons();
+      },
+
+      refreshAll() {
+        this.renderKpis();
+        this.renderSuppliesTable();
+        if (this.activeSection === "logs") {
+          this.renderInlineLogs();
+        }
+        this.updateAttendanceBadge();
+      },
+
+      renderKpis() {
+        const data = StorageManager.get();
+        const supplies = (data.products || []).filter(p => !p.isService);
+        const totalItems = supplies.length;
+        const totalUnits = supplies.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+        const outStock = supplies.filter(p => (Number(p.stock) || 0) <= 0).length;
+        const lowStock = supplies.filter(p => (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= (Number(p.lowStockThreshold) || 10)).length;
+
+        const elTotal = document.getElementById("inv-kpi-total-items");
+        const elUnits = document.getElementById("inv-kpi-total-units");
+        const elLow = document.getElementById("inv-kpi-low-stock");
+        const elOut = document.getElementById("inv-kpi-out-stock");
+
+        if (elTotal) elTotal.textContent = totalItems;
+        if (elUnits) elUnits.textContent = totalUnits.toLocaleString();
+        if (elLow) elLow.textContent = lowStock;
+        if (elOut) elOut.textContent = outStock;
+      },
+
+      renderSuppliesTable() {
+        const tbody = document.getElementById("admin-inventory-tbody");
+        if (!tbody) return;
+
+        const data = StorageManager.get();
+        const allSupplies = (data.products || []).filter(p => !p.isService);
+        const query = (document.getElementById("inv-search-input")?.value || "").toLowerCase().trim();
+        const statusFilter = document.getElementById("inv-stock-filter")?.value || "ALL";
+
+        // Update Low Stock Alert Banner
+        const lowStockItems = allSupplies.filter(p => (Number(p.stock) || 0) <= (Number(p.lowStockThreshold) || 10));
+        const banner = document.getElementById("low-stock-alert-banner");
+        const bannerText = document.getElementById("low-stock-alert-text");
+        if (banner && bannerText) {
+          if (lowStockItems.length > 0) {
+            banner.style.display = "flex";
+            bannerText.textContent = `${lowStockItems.length} supply item(s) need attention: ${lowStockItems.map(i => `${i.name} (${i.stock} left)`).join(", ")}`;
+          } else {
+            banner.style.display = "none";
+          }
+        }
+
+        let filtered = allSupplies.filter(p => {
+          if (query) {
+            const matchName = (p.name || "").toLowerCase().includes(query);
+            const matchBrand = (p.brand || "").toLowerCase().includes(query);
+            const matchSku = (p.sku || "").toLowerCase().includes(query);
+            if (!matchName && !matchBrand && !matchSku) return false;
+          }
+          const stock = Number(p.stock) || 0;
+          const threshold = Number(p.lowStockThreshold) || 10;
+          if (statusFilter === "OUT") return stock <= 0;
+          if (statusFilter === "LOW") return stock > 0 && stock <= threshold;
+          if (statusFilter === "HEALTHY") return stock > threshold;
+          return true;
+        });
+
+        const countLabel = document.getElementById("inv-table-count-label");
+        if (countLabel) {
+          countLabel.textContent = `Showing ${filtered.length} of ${allSupplies.length} supply items`;
+        }
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">No matching laundry supplies found.</td></tr>`;
+          return;
+        }
+
+        let html = "";
+        filtered.forEach(p => {
+          const stock = Number(p.stock) || 0;
+          const threshold = Number(p.lowStockThreshold) || 10;
+          const isOut = stock <= 0;
+          const isLow = stock > 0 && stock <= threshold;
+
+          let statusBadge = `<span class="badge badge-success">In Stock</span>`;
+          if (isOut) statusBadge = `<span class="badge badge-danger">Out of Stock</span>`;
+          else if (isLow) statusBadge = `<span class="badge badge-warning">Low Stock</span>`;
+
+          html += `
+            <tr>
+              <td>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="color-dot" style="background:${p.color || '#0284c7'}"></span>
+                  <strong>${p.name}</strong>
+                </div>
+              </td>
+              <td>${p.brand || "-"}</td>
+              <td class="font-mono">${p.sku || "-"}</td>
+              <td>${App.formatCurrency(p.price || 0)}</td>
+              <td><strong class="${isOut ? 'text-danger' : isLow ? 'text-warning' : 'text-success'}" style="font-size:1rem;">${stock}</strong></td>
+              <td>${threshold}</td>
+              <td>${statusBadge}</td>
+              <td class="text-right">
+                <div class="table-actions" style="justify-content:flex-end;">
+                  <button type="button" class="btn btn-primary btn-sm" onclick="AdminPanel.openAdjustModal('${p.id}')">
+                    <i data-lucide="Sliders"></i> Adjust Stock
+                  </button>
+                  <button type="button" class="icon-btn sm" onclick="InventorySite.editSupplyItem('${p.id}')" title="Edit Supply Item">
+                    <i data-lucide="edit-2"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+
+        tbody.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+      },
+
+      renderInlineLogs() {
+        const tbody = document.getElementById("inv-inline-logs-tbody");
+        if (!tbody) return;
+
+        const data = StorageManager.get();
+        const allLogs = data.inventoryLogs || [];
+        const query = (document.getElementById("inv-log-search")?.value || "").toLowerCase().trim();
+
+        const logs = allLogs.filter(l => {
+          if (!query) return true;
+          return (
+            (l.productName || "").toLowerCase().includes(query) ||
+            (l.reason || "").toLowerCase().includes(query) ||
+            (l.user || "").toLowerCase().includes(query)
+          );
+        });
+
+        const countEl = document.getElementById("inv-logs-count-label");
+        if (countEl) countEl.textContent = `${logs.length} log entries`;
+
+        if (logs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-5">No stock movement logs found.</td></tr>`;
+          return;
+        }
+
+        let html = "";
+        logs.forEach(l => {
+          const d = new Date(l.timestamp);
+          const sign = l.changeQty > 0 ? "+" : "";
+          const cls = l.changeQty > 0 ? "text-success" : l.changeQty < 0 ? "text-danger" : "text-muted";
+
+          html += `
+            <tr>
+              <td>${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+              <td><strong>${l.productName}</strong></td>
+              <td class="${cls}"><strong>${sign}${l.changeQty}</strong></td>
+              <td>${l.previousStock}</td>
+              <td><strong>${l.newStock}</strong></td>
+              <td>${l.reason}</td>
+              <td>${l.user}</td>
+            </tr>
+          `;
+        });
+
+        tbody.innerHTML = html;
+      },
+
+      openAddSupplyModal() {
+        AdminPanel.openProductModal(false);
+        const isServiceEl = document.getElementById("prod-is-service");
+        if (isServiceEl) isServiceEl.value = "false";
+        AdminPanel.toggleServiceStockFields();
+      },
+
+      editSupplyItem(id) {
+        AdminPanel.editProduct(id);
+        const isServiceEl = document.getElementById("prod-is-service");
+        if (isServiceEl) isServiceEl.value = "false";
+        AdminPanel.toggleServiceStockFields();
+      },
+
+      async saveSupplyItem(e) {
+        await AdminPanel.saveProduct(e);
+        this.refreshAll();
+      },
+
+      async submitStockAdjustment(e) {
+        await AdminPanel.saveStockAdjustment(e);
+        this.refreshAll();
+      },
+
+      async quickBarcodeStockUpdate(mode) {
+        await AdminPanel.quickBarcodeStockAction(mode);
+        this.refreshAll();
+      },
+
+      registerNewItemFromBarcode() {
+        AdminPanel.createNewProductFromBarcode();
+        const isServiceEl = document.getElementById("prod-is-service");
+        if (isServiceEl) isServiceEl.value = "false";
+        AdminPanel.toggleServiceStockFields();
+      },
+
+      startHeartbeat() {
+        if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
+        const send = async () => {
+          if (!this.currentUser || !this.currentUser.id || this._isLoggingOut) return;
+          try {
+            await StorageManager.sendHeartbeat(this.currentUser.id, this.currentSessionId);
+          } catch (e) {}
+        };
+        send();
+        this._heartbeatTimer = setInterval(send, 10000);
+      },
+
+      setupUnloadBeacon() {
+        window.addEventListener("beforeunload", () => {
+          if (this.currentUser && this.currentUser.id && this.currentSessionId && !this._isLoggingOut) {
+            const apiUrl = (typeof getApiUrl === "function") ? getApiUrl("/api/auth/logout") : "/api/auth/logout";
+            const payload = JSON.stringify({ userId: this.currentUser.id, sessionId: this.currentSessionId });
+            const blob = new Blob([payload], { type: "application/json" });
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon(apiUrl, blob);
+            }
+          }
+        });
+      },
+
+      validateSessionState(freshData) {
+        if (!this.currentUser || this._isLoggingOut) return;
+        const data = freshData || StorageManager.get();
+
+        // Sync store branding
+        if (data && data.settings) {
+          const storeEls = document.querySelectorAll(".store-name");
+          storeEls.forEach(el => {
+            if (data.settings.storeName) el.textContent = data.settings.storeName;
+          });
+          this.applyCustomLogo(data.settings.storeLogo);
+        }
+
+        const dbUser = (data.users || []).find(u => u.id === this.currentUser.id || (this.currentUser.username && u.username === this.currentUser.username));
+        if (!dbUser) {
+          this.forceLogout("Your staff account has been removed by an Administrator.");
+          return;
+        }
+
+        if (dbUser.status === "disabled") {
+          const reason = dbUser.autoDisableReason
+            ? `Your shift access has ended (${dbUser.autoDisableReason}).`
+            : "Your account has been disabled by an Administrator.";
+          this.forceLogout(reason);
+          return;
+        }
+
+        // Sync theme preference if changed
+        if (dbUser.theme && dbUser.theme !== document.documentElement.getAttribute("data-theme")) {
+          this.currentUser.theme = dbUser.theme;
+          try {
+            localStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+            sessionStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+          } catch (e) {}
+          document.documentElement.setAttribute("data-theme", dbUser.theme);
+          localStorage.setItem("POS_THEME", dbUser.theme);
+          this.updateThemeIcon(dbUser.theme);
+        }
+
+        // Multi-device session check: if Admin freed all devices or this session was removed
+        if (this.currentSessionId && dbUser.role !== "ADMIN") {
+          const activeSessions = StorageManager.getActiveSessions(dbUser);
+          const hasAnySessionField = Array.isArray(dbUser.activeSessions) || dbUser.activeSessionId;
+          if (hasAnySessionField && activeSessions.length > 0) {
+            const stillValid = activeSessions.some(s => s.sessionId === this.currentSessionId);
+            if (!stillValid) {
+              this.forceLogout("Your device session was disconnected or superseded.");
+              return;
+            }
+          } else if (dbUser.isOnline === false && dbUser.activeSessionId === null && Array.isArray(dbUser.activeSessions) && dbUser.activeSessions.length === 0) {
+            this.forceLogout("Your device session was disconnected by an Administrator.");
+            return;
+          }
+        }
+      },
+
+      forceLogout(reasonMsg) {
+        if (this._isLoggingOut) return;
+        this._isLoggingOut = true;
+        if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
+
+        if (this.currentUser) {
+          const activeAttId = sessionStorage.getItem("POS_ACTIVE_ATTENDANCE_ID") || localStorage.getItem("POS_ACTIVE_ATTENDANCE_ID");
+          AttendanceManager.clockOut(this.currentUser.id, activeAttId);
+          StorageManager.logoutSession(this.currentUser.id, this.currentSessionId);
+        }
+
+        this.currentUser = null;
+        this.currentSessionId = null;
+        sessionStorage.removeItem("POS_ACTIVE_USER");
+        sessionStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
+        sessionStorage.removeItem("POS_ACTIVE_SESSION_ID");
+        localStorage.removeItem("POS_ACTIVE_USER");
+        localStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
+        localStorage.removeItem("POS_ACTIVE_SESSION_ID");
+
+        Sound.playError();
+
+        const modal = document.getElementById("modal-admin-timeout");
+        const msgEl = document.getElementById("admin-timeout-msg");
+        const countEl = document.getElementById("admin-timeout-countdown");
+
+        if (modal && msgEl) {
+          msgEl.textContent = reasonMsg || "Your session has ended.";
+          modal.classList.add("active");
+          if (window.lucide) lucide.createIcons();
+
+          let secondsLeft = 4;
+          if (countEl) countEl.textContent = secondsLeft;
+          this._forceLogoutTimer = setInterval(() => {
+            secondsLeft--;
+            if (countEl) countEl.textContent = Math.max(0, secondsLeft);
+            if (secondsLeft <= 0) {
+              clearInterval(this._forceLogoutTimer);
+              this.completeForceLogoutRedirect();
+            }
+          }, 1000);
+        } else {
+          this.completeForceLogoutRedirect();
+        }
+      },
+
+      completeForceLogoutRedirect() {
+        if (this._forceLogoutTimer) clearInterval(this._forceLogoutTimer);
+        window.location.href = "index.html";
+      },
+
+      async logout() {
+        if (this._isLoggingOut) return;
+        this._isLoggingOut = true;
+        if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
+
+        const userToLogout = this.currentUser;
+        const sessionToLogout = this.currentSessionId;
+        const activeAttId = sessionStorage.getItem("POS_ACTIVE_ATTENDANCE_ID") || localStorage.getItem("POS_ACTIVE_ATTENDANCE_ID");
+
+        if (userToLogout) {
+          AttendanceManager.clockOut(userToLogout.id, activeAttId);
+        }
+
+        this.currentUser = null;
+        this.currentSessionId = null;
+        sessionStorage.removeItem("POS_ACTIVE_USER");
+        sessionStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
+        sessionStorage.removeItem("POS_ACTIVE_SESSION_ID");
+        localStorage.removeItem("POS_ACTIVE_USER");
+        localStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
+        localStorage.removeItem("POS_ACTIVE_SESSION_ID");
+
+        if (userToLogout) {
+          await StorageManager.logoutSession(userToLogout.id, sessionToLogout);
+        }
+
+        Sound.playClick();
+        window.location.href = "index.html";
+      },
+
+      initTheme() {
+        const userTheme = this.currentUser && this.currentUser.theme;
+        const savedTheme = userTheme || localStorage.getItem("POS_THEME") || "dark";
+        document.documentElement.setAttribute("data-theme", savedTheme);
+        localStorage.setItem("POS_THEME", savedTheme);
+        this.updateThemeIcon(savedTheme);
+      },
+
+      toggleTheme() {
+        const current = document.documentElement.getAttribute("data-theme");
+        const next = current === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("POS_THEME", next);
+        this.updateThemeIcon(next);
+
+        if (this.currentUser && this.currentUser.id) {
+          this.currentUser.theme = next;
+          try {
+            localStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+            sessionStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
+          } catch (e) {}
+          StorageManager.updateUser(this.currentUser.id, { theme: next }).catch(() => {});
+        }
+
+        Sound.playClick();
+      },
+
+      updateThemeIcon(theme) {
+        const icon = document.getElementById("theme-icon");
+        if (icon) {
+          icon.setAttribute("data-lucide", theme === "dark" ? "sun" : "moon");
+          if (window.lucide) lucide.createIcons();
+        }
+      },
+
+      toggleSound() {
+        const enabled = Sound.toggle();
+        const icon = document.getElementById("sound-icon");
+        if (icon) {
+          icon.setAttribute("data-lucide", enabled ? "volume-2" : "volume-x");
+          if (window.lucide) lucide.createIcons();
+        }
+        this.showToast(enabled ? "Sound effects enabled" : "Sound effects muted", "info");
+      },
+
+      startLiveClock() {
+        const update = () => {
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true
+          });
+          const el = document.getElementById("inv-clock");
+          if (el) el.textContent = timeStr;
+        };
+        update();
+        setInterval(update, 1000);
+      },
+
+      showToast(message, type = "info") {
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+
+        const toast = document.createElement("div");
+        toast.className = `toast toast-${type}`;
+
+        let iconName = "info";
+        if (type === "success") iconName = "check-circle-2";
+        if (type === "danger") iconName = "alert-octagon";
+        if (type === "warning") iconName = "alert-triangle";
+
+        toast.innerHTML = `
+          <i data-lucide="${iconName}"></i>
+          <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+        if (window.lucide) lucide.createIcons();
+
+        setTimeout(() => toast.classList.add("show"), 10);
+        setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => toast.remove(), 300);
+        }, 3200);
+      },
+
+      showConfirmModal(title, message, onConfirm) {
+        const modal = document.getElementById("modal-confirm");
+        const titleEl = document.getElementById("confirm-title");
+        const msgEl = document.getElementById("confirm-message");
+        const confirmBtn = document.getElementById("confirm-Action-btn");
+
+        if (titleEl) titleEl.innerHTML = `<i data-lucide="alert-triangle"></i> ${title}`;
+        if (msgEl) msgEl.textContent = message;
+
+        const newBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+
+        newBtn.addEventListener("click", () => {
+          this.closeConfirmModal();
+          if (typeof onConfirm === "function") onConfirm();
+        });
+
+        if (modal) modal.classList.add("active");
+        if (window.lucide) lucide.createIcons();
+      },
+
+      closeConfirmModal() {
+        const modal = document.getElementById("modal-confirm");
+        if (modal) modal.classList.remove("active");
+      }
+    };
+
+    // Provide global App compatibility for AdminPanel methods
+    const App = {
+      getCurrentUser: () => InventorySite.currentUser,
+      showToast: (m, t) => InventorySite.showToast(m, t),
+      showConfirmModal: (t, m, cb) => InventorySite.showConfirmModal(t, m, cb),
+      formatCurrency: (amount) => {
+        const data = StorageManager.get();
+        const symbol = data?.settings?.currency || "₱";
+        return `${symbol}${Number(amount || 0).toFixed(2)}`;
+      }
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      InventorySite.init();
+    });
+  </script>
+</body>
+
+</html>
+

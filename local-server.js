@@ -89,6 +89,45 @@ function getStoreMinutesOfDay() {
   }
 }
 
+function pruneUserActiveSessions(u, timeoutMs = 35000) {
+  if (!u) return [];
+  const now = Date.now();
+  if (!Array.isArray(u.activeSessions)) {
+    u.activeSessions = [];
+  }
+  if (u.activeSessionId && u.lastHeartbeat && (now - u.lastHeartbeat < timeoutMs)) {
+    if (!u.activeSessions.some(s => s && s.sessionId === u.activeSessionId)) {
+      u.activeSessions.push({
+        sessionId: u.activeSessionId,
+        lastHeartbeat: u.lastHeartbeat,
+        loginAt: u.lastLoginAt || new Date().toISOString()
+      });
+    }
+  }
+  u.activeSessions = u.activeSessions.filter(s => s && s.sessionId && s.lastHeartbeat && (now - s.lastHeartbeat < timeoutMs));
+
+  if (u.activeSessions.length > 0) {
+    u.isOnline = true;
+    u.activeSessionId = u.activeSessions[u.activeSessions.length - 1].sessionId;
+    u.lastHeartbeat = Math.max(...u.activeSessions.map(s => s.lastHeartbeat));
+  } else {
+    u.isOnline = false;
+    u.activeSessionId = null;
+    u.lastHeartbeat = null;
+  }
+  return u.activeSessions;
+}
+
+function getUserMaxDevices(u) {
+  if (!u) return 1;
+  if (u.maxDevices !== undefined && u.maxDevices !== null && u.maxDevices !== '') {
+    const parsed = parseInt(u.maxDevices, 10);
+    if (!isNaN(parsed) && parsed >= 0) return parsed;
+  }
+  const isOwnerOrAdmin = u.isMaster || u.role === 'ADMIN' || u.id === 'usr-admin';
+  return isOwnerOrAdmin ? 0 : 1; // 0 = Unlimited
+}
+
 function checkAutoDisableUsers(dbData) {
   if (!dbData || !Array.isArray(dbData.users)) return false;
   let modified = false;
@@ -122,6 +161,7 @@ function checkAutoDisableUsers(dbData) {
           const disableTime = new Date(u.autoDisableAt).getTime();
           if (!isNaN(disableTime) && Date.now() >= disableTime) {
             u.status = 'disabled';
+            u.activeSessions = [];
             u.activeSessionId = null;
             u.lastHeartbeat = null;
             u.isOnline = false;
@@ -162,6 +202,7 @@ function checkAutoDisableUsers(dbData) {
           // Outside shift window -> auto-disable
           if (u.status !== 'disabled') {
             u.status = 'disabled';
+            u.activeSessions = [];
             u.activeSessionId = null;
             u.lastHeartbeat = null;
             u.isOnline = false;
@@ -234,11 +275,15 @@ function saveServerData(data) {
     if (cachedData && Array.isArray(cachedData.users) && Array.isArray(data.users)) {
       data.users.forEach(u => {
         const prev = cachedData.users.find(p => p.id === u.id);
-        if (prev) {
+        if (prev && prev !== u) {
+          u.activeSessions = Array.isArray(prev.activeSessions) ? prev.activeSessions : (Array.isArray(u.activeSessions) ? u.activeSessions : []);
           u.activeSessionId = prev.activeSessionId !== undefined ? prev.activeSessionId : null;
           u.lastHeartbeat = prev.lastHeartbeat !== undefined ? prev.lastHeartbeat : null;
           u.isOnline = prev.isOnline !== undefined ? prev.isOnline : false;
           u.lastLoginAt = prev.lastLoginAt || u.lastLoginAt || null;
+          if (u.maxDevices === undefined && prev.maxDevices !== undefined) {
+            u.maxDevices = prev.maxDevices;
+          }
 
           if (u.autoDisableEnabled === undefined) u.autoDisableEnabled = !!prev.autoDisableEnabled;
           if (u.autoDisableType === undefined) u.autoDisableType = prev.autoDisableType || 'datetime';
@@ -701,6 +746,10 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { success: false, error: `Username "${newUser.username.trim()}" is already taken.` });
         }
 
+        const parsedMaxDevices = (newUser.maxDevices !== undefined && newUser.maxDevices !== null && newUser.maxDevices !== '')
+          ? Math.max(0, parseInt(newUser.maxDevices, 10))
+          : ((newUser.role === 'ADMIN') ? 0 : 1);
+
         const userRecord = {
           id: newUser.id || "usr-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
           fullName: newUser.fullName.trim(),
@@ -709,6 +758,8 @@ const server = http.createServer(async (req, res) => {
           role: newUser.role || "CASHIER",
           status: newUser.status || "active",
           isMaster: false,
+          maxDevices: isNaN(parsedMaxDevices) ? 1 : parsedMaxDevices,
+          activeSessions: [],
           autoDisableEnabled: !!newUser.autoDisableEnabled,
           autoDisableType: newUser.autoDisableType || "datetime",
           autoDisableAt: newUser.autoDisableAt || null,
@@ -771,6 +822,17 @@ const server = http.createServer(async (req, res) => {
         if (updates.theme !== undefined) {
           existing.theme = updates.theme;
         }
+        if (updates.maxDevices !== undefined && updates.maxDevices !== null && updates.maxDevices !== '') {
+          const parsedMax = parseInt(updates.maxDevices, 10);
+          if (!isNaN(parsedMax) && parsedMax >= 0) {
+            existing.maxDevices = parsedMax;
+            // Trim excess active sessions if the limit was reduced
+            const activeSessions = pruneUserActiveSessions(existing, 35000);
+            if (parsedMax > 0 && activeSessions.length > parsedMax) {
+              existing.activeSessions = activeSessions.slice(-parsedMax);
+            }
+          }
+        }
         if (!isMaster) {
           existing.role = updates.role || existing.role;
           if (updates.status) {
@@ -778,6 +840,11 @@ const server = http.createServer(async (req, res) => {
               existing.lastEnabledAt = new Date().toISOString();
               existing.autoDisabledAt = null;
               existing.autoDisableReason = null;
+            } else if (updates.status === 'disabled') {
+              existing.activeSessions = [];
+              existing.activeSessionId = null;
+              existing.lastHeartbeat = null;
+              existing.isOnline = false;
             }
             existing.status = updates.status;
           }
@@ -899,24 +966,28 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 403, { success: false, error: reason });
         }
 
-        // STRICT SINGLE DEVICE ENFORCEMENT ONLY FOR STAFF ACCOUNTS (EXCLUDES OWNER / ADMIN)
-        const isOwnerOrAdmin = user.isMaster || user.role === 'ADMIN' || user.id === 'usr-admin';
-        if (!isOwnerOrAdmin) {
-          const now = Date.now();
-          const HEARTBEAT_TIMEOUT_MS = 35000; // 35 seconds timeout for active heartbeats
-          const isCurrentlyOnline = user.activeSessionId && user.lastHeartbeat && (now - user.lastHeartbeat < HEARTBEAT_TIMEOUT_MS);
+        // CONFIGURABLE MULTI-DEVICE LOGIN LIMIT ENFORCEMENT
+        const HEARTBEAT_TIMEOUT_MS = 35000; // 35 seconds timeout for active heartbeats
+        const activeSessions = pruneUserActiveSessions(user, HEARTBEAT_TIMEOUT_MS);
+        const maxDevices = getUserMaxDevices(user); // 0 = Unlimited
 
-          if (isCurrentlyOnline) {
-            return sendJson(res, 409, {
-              success: false,
-              error: `This staff account is currently active and logged in on another device. Strictly only 1 device is allowed at a time for staff accounts. Please log out from the other device first.`
-            });
-          }
+        if (maxDevices > 0 && activeSessions.length >= maxDevices) {
+          const deviceLabel = maxDevices === 1 ? '1 device' : `${maxDevices} devices`;
+          return sendJson(res, 409, {
+            success: false,
+            error: `Maximum device login limit reached (${activeSessions.length}/${maxDevices} active). Only ${deviceLabel} can be logged in simultaneously for this account. Please log out from another device first.`
+          });
         }
 
-        // Issue new unique session ID
+        // Issue new unique session ID and append to activeSessions
         const now = Date.now();
         const sessionId = "sess-" + now + "-" + Math.random().toString(36).substr(2, 8);
+        if (!Array.isArray(user.activeSessions)) user.activeSessions = [];
+        user.activeSessions.push({
+          sessionId: sessionId,
+          lastHeartbeat: now,
+          loginAt: new Date().toISOString()
+        });
         user.activeSessionId = sessionId;
         user.lastHeartbeat = now;
         user.isOnline = true;
@@ -934,6 +1005,8 @@ const server = http.createServer(async (req, res) => {
             role: user.role,
             isMaster: !!user.isMaster,
             status: user.status,
+            maxDevices: maxDevices,
+            activeSessions: user.activeSessions,
             activeSessionId: sessionId,
             isOnline: true,
             theme: user.theme || 'dark'
@@ -962,6 +1035,7 @@ const server = http.createServer(async (req, res) => {
         }
 
         if (user.status === 'disabled') {
+          user.activeSessions = [];
           user.activeSessionId = null;
           user.isOnline = false;
           saveServerData(dbData);
@@ -969,27 +1043,41 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 200, { success: false, active: false, reason: reason });
         }
 
-        const isOwnerOrAdmin = user.isMaster || user.role === 'ADMIN' || user.id === 'usr-admin';
+        const now = Date.now();
+        const activeSessions = pruneUserActiveSessions(user, 35000);
+        const maxDevices = getUserMaxDevices(user); // 0 = Unlimited
 
-        // Check if session is still the authorized active session (for staff accounts)
-        if (!isOwnerOrAdmin) {
-          if (!user.activeSessionId || (sessionId && user.activeSessionId !== sessionId)) {
+        const matchedSession = sessionId ? activeSessions.find(s => s.sessionId === sessionId) : null;
+
+        if (maxDevices > 0) {
+          if (!matchedSession) {
             return sendJson(res, 200, {
               success: true,
               active: false,
-              reason: 'Your device session has been freed by the Administrator or logged in on another device.'
+              reason: 'Your device session has been disconnected by the Administrator or expired.'
             });
           }
         }
 
-        // Refresh heartbeat
-        user.lastHeartbeat = Date.now();
+        // Refresh heartbeat for this session
+        if (matchedSession) {
+          matchedSession.lastHeartbeat = now;
+        } else if (sessionId) {
+          user.activeSessions.push({
+            sessionId: sessionId,
+            lastHeartbeat: now,
+            loginAt: new Date().toISOString()
+          });
+        }
+        user.lastHeartbeat = now;
         user.isOnline = true;
         saveServerData(dbData);
 
         return sendJson(res, 200, {
           success: true,
-          active: true
+          active: true,
+          activeDevicesCount: user.activeSessions.length,
+          maxDevices: maxDevices
         });
       } catch (err) {
         return sendJson(res, 400, { success: false, active: false, error: err.message });
@@ -1006,9 +1094,15 @@ const server = http.createServer(async (req, res) => {
         const user = users.find(u => u.id === userId || (userId && u.username === userId));
 
         if (user) {
-          user.activeSessionId = null;
-          user.lastHeartbeat = null;
-          user.isOnline = false;
+          if (Array.isArray(user.activeSessions) && sessionId) {
+            user.activeSessions = user.activeSessions.filter(s => s && s.sessionId !== sessionId);
+          } else if (!sessionId) {
+            user.activeSessions = [];
+          }
+          if (user.activeSessionId === sessionId) {
+            user.activeSessionId = null;
+          }
+          pruneUserActiveSessions(user, 35000);
           saveServerData(dbData);
         }
 
@@ -1022,7 +1116,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/auth/force-logout' && method === 'POST') {
       try {
         const raw = await readBody(req);
-        const { targetUserId } = JSON.parse(raw);
+        const { targetUserId, sessionId } = JSON.parse(raw);
         const dbData = loadServerData();
         const users = dbData.users || [];
         const user = users.find(u => u.id === targetUserId || (targetUserId && u.username === targetUserId));
@@ -1031,14 +1125,21 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 404, { success: false, error: 'User account not found.' });
         }
 
-        user.activeSessionId = null;
-        user.lastHeartbeat = null;
-        user.isOnline = false;
+        if (sessionId && Array.isArray(user.activeSessions)) {
+          user.activeSessions = user.activeSessions.filter(s => s && s.sessionId !== sessionId);
+          if (user.activeSessionId === sessionId) user.activeSessionId = null;
+          pruneUserActiveSessions(user, 35000);
+        } else {
+          user.activeSessions = [];
+          user.activeSessionId = null;
+          user.lastHeartbeat = null;
+          user.isOnline = false;
+        }
         saveServerData(dbData);
 
         return sendJson(res, 200, {
           success: true,
-          message: `Device session for ${user.fullName} has been freed.`,
+          message: `Device session(s) for ${user.fullName} have been freed.`,
           users: dbData.users
         });
       } catch (err) {
@@ -1059,10 +1160,11 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 401, { success: false, valid: false });
         }
 
-        const isOwnerOrAdmin = user.isMaster || user.role === 'ADMIN' || user.id === 'usr-admin';
+        const activeSessions = pruneUserActiveSessions(user, 35000);
+        const maxDevices = getUserMaxDevices(user);
 
-        if (!isOwnerOrAdmin && user.activeSessionId && sessionId && user.activeSessionId !== sessionId) {
-          return sendJson(res, 200, { success: true, valid: false, reason: 'Session expired or active on another device.' });
+        if (maxDevices > 0 && sessionId && !activeSessions.some(s => s.sessionId === sessionId)) {
+          return sendJson(res, 200, { success: true, valid: false, reason: 'Session expired or disconnected by Administrator.' });
         }
 
         return sendJson(res, 200, {
@@ -1075,6 +1177,8 @@ const server = http.createServer(async (req, res) => {
             role: user.role,
             isMaster: !!user.isMaster,
             status: user.status,
+            maxDevices: maxDevices,
+            activeSessions: user.activeSessions,
             activeSessionId: user.activeSessionId,
             isOnline: user.isOnline,
             theme: user.theme || 'dark'

@@ -114,6 +114,8 @@ const App = {
 
     if (this.currentUser.role === "ADMIN") {
       this.showAdmin();
+    } else if (this.currentUser.role === "INVENTORY_MANAGER") {
+      window.location.href = "inventory.html";
     } else {
       this.showCashier();
     }

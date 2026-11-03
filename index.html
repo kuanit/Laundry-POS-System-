@@ -380,6 +380,36 @@
           }
 
           const errData = await res.json().catch(() => ({}));
+
+          // Multi-device fallback if remote server is still running legacy single-device check
+          if (res.status === 409) {
+            await StorageManager.fetchFromServer(true);
+            const data = StorageManager.get();
+            const dbUser = (data.users || []).find(
+              u => u.username && u.username.toLowerCase() === user.toLowerCase() && u.password === pass
+            );
+            if (dbUser && dbUser.status === "active") {
+              const maxDevices = StorageManager.getMaxDevices(dbUser);
+              const activeSessions = StorageManager.getActiveSessions(dbUser);
+              if (maxDevices === 0 || activeSessions.length < maxDevices) {
+                const sessionId = "sess-" + Date.now() + "-" + Math.random().toString(36).substring(2, 8);
+                activeSessions.push({ sessionId, lastHeartbeat: Date.now(), loginAt: new Date().toISOString() });
+                dbUser.activeSessions = activeSessions;
+                dbUser.activeSessionId = sessionId;
+                dbUser.isOnline = true;
+                dbUser.lastHeartbeat = Date.now();
+                StorageManager.save(data);
+                const { password: _, ...safeUser } = dbUser;
+                this.onLoginSuccess(safeUser, sessionId);
+                return;
+              } else {
+                throw new Error(
+                  `Maximum device limit reached (${activeSessions.length}/${maxDevices} active device${maxDevices === 1 ? "" : "s"}). Please log out from another device first.`
+                );
+              }
+            }
+          }
+
           throw new Error(errData.error || "Invalid username or password.");
         } catch (err) {
           Sound.playError();
@@ -395,7 +425,7 @@
       },
 
       onLoginSuccess(user, sessionId) {
-        // Save user account's theme for the POS / Admin portals
+        // Save user account's theme for the POS / Admin / Inventory portals
         const accountTheme = user.theme || "dark";
         localStorage.setItem("POS_THEME", accountTheme);
         // Login screen and any popups strictly remain in Dark Mode
@@ -408,14 +438,25 @@
           localStorage.setItem("POS_ACTIVE_SESSION_ID", sessionId);
         }
 
-        if (typeof AttendanceManager !== "undefined") {
-          AttendanceManager.recordTimeIn(user);
+        if (typeof AttendanceManager !== "undefined" && user.role !== "ADMIN") {
+          if (typeof AttendanceManager.clockIn === "function") {
+            const rec = AttendanceManager.clockIn(user);
+            if (rec && rec.id) {
+              sessionStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", rec.id);
+              localStorage.setItem("POS_ACTIVE_ATTENDANCE_ID", rec.id);
+            }
+          } else if (typeof AttendanceManager.recordTimeIn === "function") {
+            AttendanceManager.recordTimeIn(user);
+          }
         }
 
         Sound.playSuccess();
         this.showToast(`Welcome back, ${user.fullName}! Redirecting...`, "success");
 
-        const targetUrl = user.role === "ADMIN" ? "admin.html" : "pos.html";
+        let targetUrl = "pos.html";
+        if (user.role === "ADMIN") targetUrl = "admin.html";
+        else if (user.role === "INVENTORY_MANAGER") targetUrl = "inventory.html";
+
         setTimeout(() => {
           window.location.replace(targetUrl);
         }, 300);
