@@ -1884,17 +1884,26 @@
           "Are you sure you want to end your administrator session? Your attendance time-out will be recorded.",
           async () => {
             this._isLoggingOut = true;
-            if (this.currentUser && typeof AttendanceManager !== "undefined") {
-              AttendanceManager.recordTimeOut(this.currentUser);
-            }
-            if (this.currentUser && this.currentSessionId) {
-              await StorageManager.logoutSession(this.currentUser.id, this.currentSessionId);
-            }
+            const userToLogout = this.currentUser;
+            const sessionToLogout = this.currentSessionId;
+            try {
+              if (userToLogout && typeof AttendanceManager !== "undefined") {
+                AttendanceManager.recordTimeOut(userToLogout);
+              }
+            } catch (e) {}
             localStorage.removeItem("POS_ACTIVE_USER");
             sessionStorage.removeItem("POS_ACTIVE_USER");
             localStorage.removeItem("POS_ACTIVE_SESSION_ID");
             sessionStorage.removeItem("POS_ACTIVE_SESSION_ID");
-            window.location.href = "index.html";
+            try {
+              if (userToLogout && sessionToLogout) {
+                await Promise.race([
+                  StorageManager.logoutSession(userToLogout.id, sessionToLogout),
+                  new Promise(resolve => setTimeout(resolve, 1200))
+                ]);
+              }
+            } catch (e) {}
+            window.location.replace("index.html");
           }
         );
       }

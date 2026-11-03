@@ -2110,38 +2110,56 @@
 
       completeForceLogoutRedirect() {
         if (this._forceLogoutTimer) clearInterval(this._forceLogoutTimer);
-        window.location.href = "index.html";
+        window.location.replace("index.html");
       },
 
       async logout() {
-        if (this._isLoggingOut) return;
+        if (this._isLoggingOut) {
+          window.location.replace("index.html");
+          return;
+        }
         this._isLoggingOut = true;
-        if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
+        if (this._heartbeatTimer) {
+          clearInterval(this._heartbeatTimer);
+          this._heartbeatTimer = null;
+        }
 
         const userToLogout = this.currentUser;
         const sessionToLogout = this.currentSessionId;
 
-        if (userToLogout && typeof AttendanceManager !== "undefined") {
-          if (typeof AttendanceManager.recordTimeOut === "function") {
+        try {
+          if (typeof Sound !== "undefined" && typeof Sound.playClick === "function") {
+            Sound.playClick();
+          }
+        } catch (e) {}
+
+        try {
+          if (userToLogout && typeof AttendanceManager !== "undefined" && typeof AttendanceManager.recordTimeOut === "function") {
             AttendanceManager.recordTimeOut(userToLogout);
           }
-        }
+        } catch (e) {}
 
         this.currentUser = null;
         this.currentSessionId = null;
-        sessionStorage.removeItem("POS_ACTIVE_USER");
-        sessionStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
-        sessionStorage.removeItem("POS_ACTIVE_SESSION_ID");
-        localStorage.removeItem("POS_ACTIVE_USER");
-        localStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
-        localStorage.removeItem("POS_ACTIVE_SESSION_ID");
+        try {
+          sessionStorage.removeItem("POS_ACTIVE_USER");
+          sessionStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
+          sessionStorage.removeItem("POS_ACTIVE_SESSION_ID");
+          localStorage.removeItem("POS_ACTIVE_USER");
+          localStorage.removeItem("POS_ACTIVE_ATTENDANCE_ID");
+          localStorage.removeItem("POS_ACTIVE_SESSION_ID");
+        } catch (e) {}
 
-        if (userToLogout) {
-          await StorageManager.logoutSession(userToLogout.id, sessionToLogout);
-        }
+        try {
+          if (userToLogout && typeof StorageManager !== "undefined" && typeof StorageManager.logoutSession === "function") {
+            await Promise.race([
+              StorageManager.logoutSession(userToLogout.id, sessionToLogout),
+              new Promise(resolve => setTimeout(resolve, 1200))
+            ]);
+          }
+        } catch (e) {}
 
-        Sound.playClick();
-        window.location.href = "index.html";
+        window.location.replace("index.html");
       },
 
       initTheme() {
@@ -2165,10 +2183,14 @@
             localStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
             sessionStorage.setItem("POS_ACTIVE_USER", JSON.stringify(this.currentUser));
           } catch (e) {}
-          StorageManager.updateUser(this.currentUser.id, { theme: next }).catch(() => {});
+          if (typeof StorageManager !== "undefined" && typeof StorageManager.updateUserTheme === "function") {
+            StorageManager.updateUserTheme(this.currentUser.id || this.currentUser.username, next);
+          }
         }
 
-        Sound.playClick();
+        if (typeof Sound !== "undefined" && typeof Sound.playClick === "function") {
+          Sound.playClick();
+        }
       },
 
       updateThemeIcon(theme) {

@@ -67,6 +67,18 @@ const Sound = {
     }
   },
 
+  toggle() {
+    this.enabled = !this.enabled;
+    if (this.enabled) {
+      this.playBeep(880, 0.08);
+    }
+    return this.enabled;
+  },
+
+  playClick() {
+    this.playBeep(680, 0.05, "sine");
+  },
+
   playAdd() {
     this.playBeep(750, 0.07, "sine");
   },
