@@ -376,13 +376,26 @@ const AdminPanel = {
     }
 
     if (sales.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No laundry orders match the filter.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">No laundry orders match the filter.</td></tr>`;
       return;
     }
 
     let html = "";
     sales.forEach(sale => {
       const currentStatus = sale.laundryStatus || "RECEIVED";
+      let orderedDateStr = "—";
+      let orderedTimeStr = "";
+      if (sale.createdAt) {
+        const orderedDt = new Date(sale.createdAt);
+        if (!isNaN(orderedDt.getTime())) {
+          orderedDateStr = orderedDt.toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          });
+          orderedTimeStr = orderedDt.toLocaleTimeString('en-US', {
+            hour: 'numeric', minute: '2-digit', hour12: true
+          });
+        }
+      }
       const dueFormatted = sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
       }) : "Standard";
@@ -402,6 +415,10 @@ const AdminPanel = {
           </td>
           <td class="text-sm">${itemsSummary}</td>
           <td>${weightDisplay}</td>
+          <td>
+            <span class="text-sm font-bold">${orderedDateStr}</span>
+            ${orderedTimeStr ? `<br><small class="text-muted"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:-1px;"></i> ${orderedTimeStr}</small>` : ''}
+          </td>
           <td><span class="text-warning text-sm font-bold">${dueFormatted}</span></td>
           <td class="font-bold text-success">₱${sale.total.toFixed(2)}</td>
           <td>
