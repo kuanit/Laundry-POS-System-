@@ -37,7 +37,7 @@
   <script src="https://unpkg.com/@zxing/library@latest"></script>
 
   <!-- Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=3.5">
+  <link rel="stylesheet" href="css/styles.css?v=4.5">
   <style>
     .inv-portal-wrapper {
       display: flex;
@@ -651,12 +651,12 @@
               <option value="month">This Month</option>
               <option value="custom">Custom Date Range</option>
             </select>
-            <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:3px 8px;">
-              <small class="text-muted" style="font-weight:600; font-size:0.72rem;">From</small>
-              <input type="date" id="inv-logs-date-from" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="InventorySite.onLogsCustomDateChange()">
-              <small class="text-muted" style="font-weight:600; font-size:0.72rem;">To</small>
-              <input type="date" id="inv-logs-date-to" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="InventorySite.onLogsCustomDateChange()">
-              <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 7px; height:26px; font-size:0.72rem;" onclick="InventorySite.clearLogsDateFilter()" title="Reset Date Filter">✕</button>
+            <div class="date-filter-group">
+              <span class="date-filter-label">From</span>
+              <input type="date" id="inv-logs-date-from" class="date-filter-input" onchange="InventorySite.onLogsCustomDateChange()">
+              <span class="date-filter-label">To</span>
+              <input type="date" id="inv-logs-date-to" class="date-filter-input" onchange="InventorySite.onLogsCustomDateChange()">
+              <button type="button" class="date-filter-clear-btn" onclick="InventorySite.clearLogsDateFilter()" title="Reset Date Filter">✕</button>
             </div>
           </div>
           <div class="toolbar-right">
