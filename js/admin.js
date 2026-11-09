@@ -345,6 +345,22 @@ const AdminPanel = {
     return `${y}-${m}-${d}`;
   },
 
+  /**
+   * Returns the current week's Sunday (first day) through Saturday (last day) range.
+   * Resets automatically every Sunday (getDay() === 0).
+   */
+  getCurrentWeekRange(refDate = new Date()) {
+    const dayOfWeek = refDate.getDay(); // 0 = Sunday, 6 = Saturday
+    const sunday = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate() - dayOfWeek, 0, 0, 0, 0);
+    const saturday = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 6, 23, 59, 59, 999);
+    return {
+      start: sunday,
+      end: saturday,
+      startYMD: this.toLocalYMD(sunday),
+      endYMD: this.toLocalYMD(saturday)
+    };
+  },
+
   applyPeriodToDateInputs(periodId, fromId, toId) {
     const period = document.getElementById(periodId)?.value || "all";
     const fromEl = document.getElementById(fromId);
@@ -366,10 +382,9 @@ const AdminPanel = {
       fromEl.value = yStr;
       toEl.value = yStr;
     } else if (period === "week") {
-      const w = new Date(now);
-      w.setDate(w.getDate() - 6);
-      fromEl.value = this.toLocalYMD(w);
-      toEl.value = this.toLocalYMD(now);
+      const weekRange = this.getCurrentWeekRange(now);
+      fromEl.value = weekRange.startYMD;
+      toEl.value = weekRange.endYMD;
     } else if (period === "month") {
       const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
       fromEl.value = this.toLocalYMD(mStart);
@@ -402,9 +417,8 @@ const AdminPanel = {
       return itemYMD === this.toLocalYMD(y);
     }
     if (period === "week") {
-      const w = new Date(now);
-      w.setDate(w.getDate() - 6);
-      return itemYMD >= this.toLocalYMD(w) && itemYMD <= todayYMD;
+      const weekRange = this.getCurrentWeekRange(now);
+      return itemYMD >= weekRange.startYMD && itemYMD <= weekRange.endYMD;
     }
     if (period === "month") {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -2692,10 +2706,10 @@ const AdminPanel = {
 
     const filteredSales = allSales.filter(s => this.matchesDateFilter(s.createdAt, period, dateFrom, dateTo));
 
-    // Aggregate benchmark periods (Today, This Week, This Month)
+    // Aggregate benchmark periods (Today, This Week [Sun-Sat], This Month)
     const now = new Date();
-    const todayStr = now.toDateString();
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+    const todayYMD = this.toLocalYMD(now);
+    const weekRange = this.getCurrentWeekRange(now);
 
     let salesToday = 0, countToday = 0;
     let salesWeek = 0, countWeek = 0;
@@ -2703,18 +2717,23 @@ const AdminPanel = {
 
     allSales.forEach(s => {
       const d = new Date(s.createdAt);
-      if (d.toDateString() === todayStr) { salesToday += s.total; countToday++; }
-      if (d >= weekAgo) { salesWeek += s.total; countWeek++; }
+      if (isNaN(d.getTime())) return;
+      const itemYMD = this.toLocalYMD(d);
+      if (itemYMD === todayYMD) { salesToday += s.total; countToday++; }
+      if (itemYMD >= weekRange.startYMD && itemYMD <= weekRange.endYMD) { salesWeek += s.total; countWeek++; }
       if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) { salesMonth += s.total; countMonth++; }
     });
 
     const filteredTotal = filteredSales.reduce((sum, s) => sum + s.total, 0);
     const avgOrder = filteredSales.length > 0 ? (filteredTotal / filteredSales.length) : 0;
 
+    const weekStartFmt = weekRange.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const weekEndFmt = weekRange.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
     document.getElementById("report-sales-today").textContent = `₱${salesToday.toFixed(2)}`;
     document.getElementById("report-orders-today").textContent = `${countToday} Orders`;
     document.getElementById("report-sales-week").textContent = `₱${salesWeek.toFixed(2)}`;
-    document.getElementById("report-orders-week").textContent = `${countWeek} Orders`;
+    document.getElementById("report-orders-week").textContent = `${countWeek} Orders (Sun ${weekStartFmt} – Sat ${weekEndFmt})`;
     document.getElementById("report-sales-month").textContent = `₱${salesMonth.toFixed(2)}`;
     document.getElementById("report-orders-month").textContent = `${countMonth} Orders`;
     document.getElementById("report-avg-order").textContent = `₱${avgOrder.toFixed(2)}`;
@@ -2756,9 +2775,11 @@ const AdminPanel = {
           revenueByDate[str] = 0;
         }
       } else {
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
+        // Default to current week: Sunday (first day) through Saturday (last day)
+        const weekRange = this.getCurrentWeekRange(new Date());
+        for (let i = 0; i <= 6; i++) {
+          const d = new Date(weekRange.start);
+          d.setDate(weekRange.start.getDate() + i);
           const str = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           dates.push(str);
           revenueByDate[str] = 0;
