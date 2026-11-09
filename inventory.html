@@ -637,11 +637,26 @@
       <!-- SECTION 2: FULL AUDIT HISTORY -->
       <div id="inv-section-logs" style="display:none;">
         <div class="section-toolbar" style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div class="toolbar-left" style="display:flex; gap:10px; flex-wrap:wrap; flex:1;">
-            <div class="search-box-wrapper mini" style="min-width:260px; flex:1; max-width:420px;">
+          <div class="toolbar-left" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; flex:1;">
+            <div class="search-box-wrapper mini" style="min-width:240px; flex:1; max-width:380px;">
               <i data-lucide="search" class="search-icon"></i>
               <input type="text" id="inv-log-search" placeholder="Search logs by item name, reason, or staff..."
                 oninput="InventorySite.renderInlineLogs()">
+            </div>
+            <select id="inv-logs-period-filter" class="form-select mini" onchange="InventorySite.onLogsPeriodChange()">
+              <option value="all">All Dates</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">This Month</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+            <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:3px 8px;">
+              <small class="text-muted" style="font-weight:600; font-size:0.72rem;">From</small>
+              <input type="date" id="inv-logs-date-from" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="InventorySite.onLogsCustomDateChange()">
+              <small class="text-muted" style="font-weight:600; font-size:0.72rem;">To</small>
+              <input type="date" id="inv-logs-date-to" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="InventorySite.onLogsCustomDateChange()">
+              <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 7px; height:26px; font-size:0.72rem;" onclick="InventorySite.clearLogsDateFilter()" title="Reset Date Filter">✕</button>
             </div>
           </div>
           <div class="toolbar-right">
@@ -1237,7 +1252,7 @@
   <script src="js/data.js?v=4.2"></script>
   <script src="js/sound.js?v=4.2"></script>
   <script src="js/laundry-splash.js"></script>
-  <script src="js/admin.js?v=4.2"></script>
+  <script src="js/admin.js?v=4.4"></script>
   <script>
     const DEFAULT_SUPPLY_IMG = "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?auto=format&fit=crop&w=400&q=80";
 
@@ -1824,6 +1839,33 @@
         if (modal) modal.classList.remove("active");
       },
 
+      onLogsPeriodChange() {
+        if (typeof AdminPanel !== "undefined" && typeof AdminPanel.applyPeriodToDateInputs === "function") {
+          AdminPanel.applyPeriodToDateInputs("inv-logs-period-filter", "inv-logs-date-from", "inv-logs-date-to");
+        }
+        this.renderInlineLogs();
+      },
+
+      onLogsCustomDateChange() {
+        const periodEl = document.getElementById("inv-logs-period-filter");
+        const fromVal = document.getElementById("inv-logs-date-from")?.value || "";
+        const toVal = document.getElementById("inv-logs-date-to")?.value || "";
+        if (periodEl) {
+          periodEl.value = (fromVal || toVal) ? "custom" : "all";
+        }
+        this.renderInlineLogs();
+      },
+
+      clearLogsDateFilter() {
+        const periodEl = document.getElementById("inv-logs-period-filter");
+        const fromEl = document.getElementById("inv-logs-date-from");
+        const toEl = document.getElementById("inv-logs-date-to");
+        if (periodEl) periodEl.value = "all";
+        if (fromEl) fromEl.value = "";
+        if (toEl) toEl.value = "";
+        this.renderInlineLogs();
+      },
+
       renderInlineLogs() {
         const tbody = document.getElementById("inv-inline-logs-tbody");
         if (!tbody) return;
@@ -1834,8 +1876,16 @@
         (data.products || []).forEach(p => { prodMap[p.id] = p; });
 
         const query = (document.getElementById("inv-log-search")?.value || "").toLowerCase().trim();
+        const period = document.getElementById("inv-logs-period-filter")?.value || "all";
+        const dateFrom = document.getElementById("inv-logs-date-from")?.value || "";
+        const dateTo = document.getElementById("inv-logs-date-to")?.value || "";
 
         const logs = allLogs.filter(l => {
+          if (typeof AdminPanel !== "undefined" && typeof AdminPanel.matchesDateFilter === "function") {
+            if (!AdminPanel.matchesDateFilter(l.createdAt || l.timestamp, period, dateFrom, dateTo)) {
+              return false;
+            }
+          }
           if (!query) return true;
           return (
             (l.productName || "").toLowerCase().includes(query) ||

@@ -274,7 +274,7 @@
         <!-- 2. LAUNDRY STATUS TRACKER TAB (DEDICATED) -->
         <div id="tab-laundry" class="tab-pane">
           <div class="section-toolbar">
-            <div class="toolbar-left">
+            <div class="toolbar-left" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
               <div class="search-box-wrapper mini">
                 <i data-lucide="search" class="search-icon"></i>
                 <input type="text" id="admin-laundry-search" placeholder="Search customer, phone, or Claim #..."
@@ -289,6 +289,21 @@
                   onclick="AdminPanel.filterLaundryStatus('READY_FOR_PICKUP')">Ready ✅</button>
                 <button class="btn btn-secondary" id="btn-adm-lnd-claimed"
                   onclick="AdminPanel.filterLaundryStatus('CLAIMED')">Claimed 🧺</button>
+              </div>
+              <select id="admin-laundry-period-filter" class="form-select mini" onchange="AdminPanel.onLaundryPeriodChange()">
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">This Month</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
+              <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:3px 8px;">
+                <small class="text-muted" style="font-weight:600; font-size:0.72rem;">From</small>
+                <input type="date" id="admin-laundry-date-from" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onLaundryCustomDateChange()">
+                <small class="text-muted" style="font-weight:600; font-size:0.72rem;">To</small>
+                <input type="date" id="admin-laundry-date-to" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onLaundryCustomDateChange()">
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 7px; height:26px; font-size:0.72rem;" onclick="AdminPanel.clearLaundryDateFilter()" title="Reset Date Filter">✕</button>
               </div>
             </div>
             <div class="toolbar-right">
@@ -491,19 +506,27 @@
         <!-- 6. SALES & CLAIMS HISTORY TAB -->
         <div id="tab-sales" class="tab-pane">
           <div class="section-toolbar">
-            <div class="toolbar-left">
+            <div class="toolbar-left" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
               <div class="search-box-wrapper mini">
                 <i data-lucide="search" class="search-icon"></i>
                 <input type="text" id="admin-sales-search" placeholder="Search Claim #, Customer, or Cashier..."
                   oninput="AdminPanel.filterSalesTable()">
               </div>
-              <select id="admin-sales-period-filter" class="form-select mini" onchange="AdminPanel.filterSalesTable()">
+              <select id="admin-sales-period-filter" class="form-select mini" onchange="AdminPanel.onSalesPeriodChange()">
+                <option value="all">All Dates</option>
                 <option value="today">Today</option>
                 <option value="yesterday">Yesterday</option>
-                <option value="week">This Week</option>
+                <option value="week">Last 7 Days</option>
                 <option value="month">This Month</option>
-                <option value="all">All Time</option>
+                <option value="custom">Custom Date Range</option>
               </select>
+              <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:3px 8px;">
+                <small class="text-muted" style="font-weight:600; font-size:0.72rem;">From</small>
+                <input type="date" id="admin-sales-date-from" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onSalesCustomDateChange()">
+                <small class="text-muted" style="font-weight:600; font-size:0.72rem;">To</small>
+                <input type="date" id="admin-sales-date-to" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onSalesCustomDateChange()">
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 7px; height:26px; font-size:0.72rem;" onclick="AdminPanel.clearSalesDateFilter()" title="Reset Date Filter">✕</button>
+              </div>
               <select id="admin-sales-payment-filter" class="form-select mini" onchange="AdminPanel.filterSalesTable()">
                 <option value="">All Payment Methods</option>
                 <option value="CASH">Cash</option>
@@ -544,6 +567,32 @@
 
         <!-- 7. REPORTS & ANALYTICS TAB -->
         <div id="tab-reports" class="tab-pane">
+          <!-- Date Filter Toolbar for Reports & Analytics -->
+          <div class="section-toolbar" style="margin-bottom: 1rem;">
+            <div class="toolbar-left" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+              <div style="display:inline-flex; align-items:center; gap:6px; font-weight:700; color:var(--text-primary); font-size:0.88rem;">
+                <i data-lucide="calendar-range" style="width:18px; height:18px; color:var(--primary);"></i>
+                <span>Analytics Date Filter:</span>
+              </div>
+              <select id="admin-reports-period-filter" class="form-select mini" onchange="AdminPanel.onReportsPeriodChange()">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">This Month</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
+              <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:3px 8px;">
+                <small class="text-muted" style="font-weight:600; font-size:0.72rem;">From</small>
+                <input type="date" id="admin-reports-date-from" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onReportsCustomDateChange()">
+                <small class="text-muted" style="font-weight:600; font-size:0.72rem;">To</small>
+                <input type="date" id="admin-reports-date-to" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onReportsCustomDateChange()">
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 7px; height:26px; font-size:0.72rem;" onclick="AdminPanel.clearReportsDateFilter()" title="Reset Date Filter">✕</button>
+              </div>
+              <span id="admin-reports-filter-summary" class="badge-pill badge-active" style="font-size:0.76rem; padding:4px 10px;">Showing: All Time</span>
+            </div>
+          </div>
+
           <div class="reports-header-cards">
             <div class="report-kpi-card">
               <span class="label">Sales Today</span>
@@ -1343,6 +1392,23 @@
         </button>
       </div>
       <div class="modal-body">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px;">
+          <select id="admin-invlogs-period-filter" class="form-select mini" onchange="AdminPanel.onInvLogsPeriodChange()">
+            <option value="all">All Dates</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">Last 7 Days</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+          <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:3px 8px;">
+            <small class="text-muted" style="font-weight:600; font-size:0.72rem;">From</small>
+            <input type="date" id="admin-invlogs-date-from" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onInvLogsCustomDateChange()">
+            <small class="text-muted" style="font-weight:600; font-size:0.72rem;">To</small>
+            <input type="date" id="admin-invlogs-date-to" class="form-control form-control-sm" style="width:auto; padding:3px 6px; height:28px; font-size:0.78rem;" onchange="AdminPanel.onInvLogsCustomDateChange()">
+            <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 7px; height:26px; font-size:0.72rem;" onclick="AdminPanel.clearInvLogsDateFilter()" title="Reset Date Filter">✕</button>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="data-table">
             <thead>
@@ -1675,7 +1741,7 @@
   <script src="js/laundry-splash.js"></script>
   <script src="js/escpos.js"></script>
   <script src="js/pos.js?v=4.2"></script>
-  <script src="js/admin.js?v=4.3"></script>
+  <script src="js/admin.js?v=4.4"></script>
   <script>
     const AdminSite = {
       currentUser: null,

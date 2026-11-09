@@ -336,6 +336,83 @@ const AdminPanel = {
   },
 
   /* =========================================================
+     SHARED DATE FILTER HELPER (LAUNDRY, SALES, REPORTS, LOGS)
+     ========================================================= */
+  toLocalYMD(dateObj = new Date()) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  },
+
+  applyPeriodToDateInputs(periodId, fromId, toId) {
+    const period = document.getElementById(periodId)?.value || "all";
+    const fromEl = document.getElementById(fromId);
+    const toEl = document.getElementById(toId);
+    if (!fromEl || !toEl) return;
+
+    const now = new Date();
+    if (period === "all") {
+      fromEl.value = "";
+      toEl.value = "";
+    } else if (period === "today") {
+      const today = this.toLocalYMD(now);
+      fromEl.value = today;
+      toEl.value = today;
+    } else if (period === "yesterday") {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = this.toLocalYMD(y);
+      fromEl.value = yStr;
+      toEl.value = yStr;
+    } else if (period === "week") {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 6);
+      fromEl.value = this.toLocalYMD(w);
+      toEl.value = this.toLocalYMD(now);
+    } else if (period === "month") {
+      const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      fromEl.value = this.toLocalYMD(mStart);
+      toEl.value = this.toLocalYMD(now);
+    }
+  },
+
+  matchesDateFilter(isoDateStr, period, fromVal, toVal) {
+    if (!isoDateStr) return period === "all" && !fromVal && !toVal;
+    const d = new Date(isoDateStr);
+    if (isNaN(d.getTime())) return false;
+
+    const itemYMD = this.toLocalYMD(d);
+
+    // If explicit From or To dates are set, filter inclusively by local YYYY-MM-DD
+    if (fromVal || toVal) {
+      if (fromVal && itemYMD < fromVal) return false;
+      if (toVal && itemYMD > toVal) return false;
+      return true;
+    }
+
+    if (!period || period === "all") return true;
+
+    const now = new Date();
+    const todayYMD = this.toLocalYMD(now);
+    if (period === "today") return itemYMD === todayYMD;
+    if (period === "yesterday") {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      return itemYMD === this.toLocalYMD(y);
+    }
+    if (period === "week") {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 6);
+      return itemYMD >= this.toLocalYMD(w) && itemYMD <= todayYMD;
+    }
+    if (period === "month") {
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }
+    return true;
+  },
+
+  /* =========================================================
      2. DEDICATED LAUNDRY STATUS TRACKER TAB
      ========================================================= */
   filterLaundryStatus(status) {
@@ -343,6 +420,31 @@ const AdminPanel = {
     document.querySelectorAll("#tab-laundry .btn-group .btn").forEach(btn => btn.classList.remove("active"));
     const activeBtn = document.getElementById(`btn-adm-lnd-${status.toLowerCase().replace(/_/g, '-')}`);
     if (activeBtn) activeBtn.classList.add("active");
+    this.renderLaundryTable();
+  },
+
+  onLaundryPeriodChange() {
+    this.applyPeriodToDateInputs("admin-laundry-period-filter", "admin-laundry-date-from", "admin-laundry-date-to");
+    this.renderLaundryTable();
+  },
+
+  onLaundryCustomDateChange() {
+    const periodEl = document.getElementById("admin-laundry-period-filter");
+    const fromVal = document.getElementById("admin-laundry-date-from")?.value || "";
+    const toVal = document.getElementById("admin-laundry-date-to")?.value || "";
+    if (periodEl) {
+      periodEl.value = (fromVal || toVal) ? "custom" : "all";
+    }
+    this.renderLaundryTable();
+  },
+
+  clearLaundryDateFilter() {
+    const periodEl = document.getElementById("admin-laundry-period-filter");
+    const fromEl = document.getElementById("admin-laundry-date-from");
+    const toEl = document.getElementById("admin-laundry-date-to");
+    if (periodEl) periodEl.value = "all";
+    if (fromEl) fromEl.value = "";
+    if (toEl) toEl.value = "";
     this.renderLaundryTable();
   },
 
@@ -357,6 +459,9 @@ const AdminPanel = {
     const data = StorageManager.get();
     let sales = data.sales || [];
     const query = (document.getElementById("admin-laundry-search")?.value || "").trim().toLowerCase();
+    const period = document.getElementById("admin-laundry-period-filter")?.value || "all";
+    const dateFrom = document.getElementById("admin-laundry-date-from")?.value || "";
+    const dateTo = document.getElementById("admin-laundry-date-to")?.value || "";
 
     // Filter by status
     if (this.laundryFilterStatus === "ACTIVE") {
@@ -364,6 +469,9 @@ const AdminPanel = {
     } else if (this.laundryFilterStatus !== "ALL") {
       sales = sales.filter(s => s.laundryStatus === this.laundryFilterStatus);
     }
+
+    // Filter by date ordered
+    sales = sales.filter(s => this.matchesDateFilter(s.createdAt, period, dateFrom, dateTo));
 
     // Filter by search query
     if (query) {
@@ -1601,37 +1709,70 @@ const AdminPanel = {
 
   openInventoryLogsModal() {
     const modal = document.getElementById("modal-inventory-logs");
-    const tbody = document.getElementById("inventory-logs-tbody");
-    const data = StorageManager.get();
-    const logs = data.inventoryLogs || [];
-
-    if (tbody) {
-      if (logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No supplies inventory logs yet.</td></tr>`;
-      } else {
-        let html = "";
-        logs.slice(0, 30).forEach(log => {
-          const date = new Date(log.createdAt).toLocaleString('en-US', {
-            month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-          });
-          const isPositive = log.quantity > 0;
-          html += `
-            <tr>
-              <td><small class="text-muted">${date}</small></td>
-              <td><b>${log.productName}</b></td>
-              <td><span class="badge-pill badge-active">${log.type}</span></td>
-              <td class="font-bold ${isPositive ? 'text-success' : 'text-danger'}">${isPositive ? '+' : ''}${log.quantity}</td>
-              <td>${log.previousStock} &rarr; ${log.newStock}</td>
-              <td>${log.reason} ${log.notes ? `(${log.notes})` : ''}</td>
-              <td>${log.userName}</td>
-            </tr>
-          `;
-        });
-        tbody.innerHTML = html;
-      }
-    }
-
+    this.renderInventoryLogsModalTable();
     if (modal) modal.classList.add("active");
+    if (window.lucide) lucide.createIcons();
+  },
+
+  onInvLogsPeriodChange() {
+    this.applyPeriodToDateInputs("admin-invlogs-period-filter", "admin-invlogs-date-from", "admin-invlogs-date-to");
+    this.renderInventoryLogsModalTable();
+  },
+
+  onInvLogsCustomDateChange() {
+    const periodEl = document.getElementById("admin-invlogs-period-filter");
+    const fromVal = document.getElementById("admin-invlogs-date-from")?.value || "";
+    const toVal = document.getElementById("admin-invlogs-date-to")?.value || "";
+    if (periodEl) {
+      periodEl.value = (fromVal || toVal) ? "custom" : "all";
+    }
+    this.renderInventoryLogsModalTable();
+  },
+
+  clearInvLogsDateFilter() {
+    const periodEl = document.getElementById("admin-invlogs-period-filter");
+    const fromEl = document.getElementById("admin-invlogs-date-from");
+    const toEl = document.getElementById("admin-invlogs-date-to");
+    if (periodEl) periodEl.value = "all";
+    if (fromEl) fromEl.value = "";
+    if (toEl) toEl.value = "";
+    this.renderInventoryLogsModalTable();
+  },
+
+  renderInventoryLogsModalTable() {
+    const tbody = document.getElementById("inventory-logs-tbody");
+    if (!tbody) return;
+    const data = StorageManager.get();
+    let logs = data.inventoryLogs || [];
+    const period = document.getElementById("admin-invlogs-period-filter")?.value || "all";
+    const dateFrom = document.getElementById("admin-invlogs-date-from")?.value || "";
+    const dateTo = document.getElementById("admin-invlogs-date-to")?.value || "";
+
+    logs = logs.filter(log => this.matchesDateFilter(log.createdAt || log.timestamp, period, dateFrom, dateTo));
+
+    if (logs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No supplies inventory logs match the selected date filter.</td></tr>`;
+    } else {
+      let html = "";
+      logs.slice(0, 100).forEach(log => {
+        const date = new Date(log.createdAt || log.timestamp).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+        });
+        const isPositive = log.quantity > 0;
+        html += `
+          <tr>
+            <td><small class="text-muted">${date}</small></td>
+            <td><b>${log.productName}</b></td>
+            <td><span class="badge-pill badge-active">${log.type}</span></td>
+            <td class="font-bold ${isPositive ? 'text-success' : 'text-danger'}">${isPositive ? '+' : ''}${log.quantity}</td>
+            <td>${log.previousStock} &rarr; ${log.newStock}</td>
+            <td>${log.reason} ${log.notes ? `(${log.notes})` : ''}</td>
+            <td>${log.userName}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
   },
 
   closeInventoryLogsModal() {
@@ -2363,25 +2504,49 @@ const AdminPanel = {
   /* =========================================================
      6. SALES & CLAIMS HISTORY TAB
      ========================================================= */
+  onSalesPeriodChange() {
+    this.applyPeriodToDateInputs("admin-sales-period-filter", "admin-sales-date-from", "admin-sales-date-to");
+    this.renderSalesTable();
+  },
+
+  onSalesCustomDateChange() {
+    const periodEl = document.getElementById("admin-sales-period-filter");
+    const fromVal = document.getElementById("admin-sales-date-from")?.value || "";
+    const toVal = document.getElementById("admin-sales-date-to")?.value || "";
+    if (periodEl) {
+      periodEl.value = (fromVal || toVal) ? "custom" : "all";
+    }
+    this.renderSalesTable();
+  },
+
+  clearSalesDateFilter() {
+    const periodEl = document.getElementById("admin-sales-period-filter");
+    const fromEl = document.getElementById("admin-sales-date-from");
+    const toEl = document.getElementById("admin-sales-date-to");
+    if (periodEl) periodEl.value = "all";
+    if (fromEl) fromEl.value = "";
+    if (toEl) toEl.value = "";
+    this.renderSalesTable();
+  },
+
   filterSalesTable() {
     this.renderSalesTable();
   },
 
-  renderSalesTable() {
-    const tbody = document.getElementById("admin-sales-table-tbody");
-    if (!tbody) return;
-
+  getFilteredSalesList() {
     const data = StorageManager.get();
     let sales = data.sales || [];
     const search = (document.getElementById("admin-sales-search")?.value || "").trim().toLowerCase();
     const period = document.getElementById("admin-sales-period-filter")?.value || "all";
+    const dateFrom = document.getElementById("admin-sales-date-from")?.value || "";
+    const dateTo = document.getElementById("admin-sales-date-to")?.value || "";
     const payment = document.getElementById("admin-sales-payment-filter")?.value;
 
     if (search) {
-      sales = sales.filter(s => 
-        s.transactionNumber.toLowerCase().includes(search) || 
+      sales = sales.filter(s =>
+        s.transactionNumber.toLowerCase().includes(search) ||
         (s.claimNumber || "").toLowerCase().includes(search) ||
-        (s.customerName || "").toLowerCase().includes(search) || 
+        (s.customerName || "").toLowerCase().includes(search) ||
         s.cashierName.toLowerCase().includes(search)
       );
     }
@@ -2390,25 +2555,15 @@ const AdminPanel = {
       sales = sales.filter(s => s.paymentMethod === payment);
     }
 
-    if (period !== "all") {
-      const now = new Date();
-      sales = sales.filter(s => {
-        const d = new Date(s.createdAt);
-        if (period === "today") return d.toDateString() === now.toDateString();
-        if (period === "yesterday") {
-          const y = new Date(); y.setDate(y.getDate() - 1);
-          return d.toDateString() === y.toDateString();
-        }
-        if (period === "week") {
-          const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-          return d >= weekAgo;
-        }
-        if (period === "month") {
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        }
-        return true;
-      });
-    }
+    sales = sales.filter(s => this.matchesDateFilter(s.createdAt, period, dateFrom, dateTo));
+    return sales;
+  },
+
+  renderSalesTable() {
+    const tbody = document.getElementById("admin-sales-table-tbody");
+    if (!tbody) return;
+
+    const sales = this.getFilteredSalesList();
 
     if (sales.length === 0) {
       tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">No sales found matching filter.</td></tr>`;
@@ -2418,7 +2573,7 @@ const AdminPanel = {
     let html = "";
     sales.forEach(s => {
       const dateStr = new Date(s.createdAt).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
       });
       const itemsStr = s.items.map(it => `${it.quantity}${it.unit || 'pc'} ${it.productName}`).join(", ");
       const status = (s.laundryStatus || 'RECEIVED').replace(/_/g, ' ');
@@ -2475,10 +2630,9 @@ const AdminPanel = {
   },
 
   exportSalesCSV() {
-    const data = StorageManager.get();
-    const sales = data.sales || [];
+    const sales = this.getFilteredSalesList();
     if (sales.length === 0) {
-      App.showToast("No sales records to export.", "warning");
+      App.showToast("No sales records to export for the current filter.", "warning");
       return;
     }
 
@@ -2502,12 +2656,43 @@ const AdminPanel = {
   /* =========================================================
      7. REPORTS & ANALYTICS TAB
      ========================================================= */
+  onReportsPeriodChange() {
+    this.applyPeriodToDateInputs("admin-reports-period-filter", "admin-reports-date-from", "admin-reports-date-to");
+    this.renderReports();
+  },
+
+  onReportsCustomDateChange() {
+    const periodEl = document.getElementById("admin-reports-period-filter");
+    const fromVal = document.getElementById("admin-reports-date-from")?.value || "";
+    const toVal = document.getElementById("admin-reports-date-to")?.value || "";
+    if (periodEl) {
+      periodEl.value = (fromVal || toVal) ? "custom" : "all";
+    }
+    this.renderReports();
+  },
+
+  clearReportsDateFilter() {
+    const periodEl = document.getElementById("admin-reports-period-filter");
+    const fromEl = document.getElementById("admin-reports-date-from");
+    const toEl = document.getElementById("admin-reports-date-to");
+    if (periodEl) periodEl.value = "all";
+    if (fromEl) fromEl.value = "";
+    if (toEl) toEl.value = "";
+    this.renderReports();
+  },
+
   renderReports() {
     const data = StorageManager.get();
-    const sales = data.sales || [];
+    const allSales = data.sales || [];
     const categories = data.categories || [];
 
-    // Aggregate periods
+    const period = document.getElementById("admin-reports-period-filter")?.value || "all";
+    const dateFrom = document.getElementById("admin-reports-date-from")?.value || "";
+    const dateTo = document.getElementById("admin-reports-date-to")?.value || "";
+
+    const filteredSales = allSales.filter(s => this.matchesDateFilter(s.createdAt, period, dateFrom, dateTo));
+
+    // Aggregate benchmark periods (Today, This Week, This Month)
     const now = new Date();
     const todayStr = now.toDateString();
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
@@ -2516,14 +2701,15 @@ const AdminPanel = {
     let salesWeek = 0, countWeek = 0;
     let salesMonth = 0, countMonth = 0;
 
-    sales.forEach(s => {
+    allSales.forEach(s => {
       const d = new Date(s.createdAt);
       if (d.toDateString() === todayStr) { salesToday += s.total; countToday++; }
       if (d >= weekAgo) { salesWeek += s.total; countWeek++; }
       if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) { salesMonth += s.total; countMonth++; }
     });
 
-    const avgOrder = sales.length > 0 ? (sales.reduce((sum, s) => sum + s.total, 0) / sales.length) : 0;
+    const filteredTotal = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    const avgOrder = filteredSales.length > 0 ? (filteredTotal / filteredSales.length) : 0;
 
     document.getElementById("report-sales-today").textContent = `₱${salesToday.toFixed(2)}`;
     document.getElementById("report-orders-today").textContent = `${countToday} Orders`;
@@ -2533,11 +2719,19 @@ const AdminPanel = {
     document.getElementById("report-orders-month").textContent = `${countMonth} Orders`;
     document.getElementById("report-avg-order").textContent = `₱${avgOrder.toFixed(2)}`;
 
-    // Build Chart.js charts
-    this.renderCharts(sales, categories);
+    const summaryEl = document.getElementById("admin-reports-filter-summary");
+    if (summaryEl) {
+      const rangeLabel = (dateFrom || dateTo)
+        ? `${dateFrom || 'Start'} → ${dateTo || 'Now'}`
+        : "All Time";
+      summaryEl.textContent = `${rangeLabel} • ${filteredSales.length} Orders (₱${filteredTotal.toFixed(2)})`;
+    }
+
+    // Build Chart.js charts using the filtered sales
+    this.renderCharts(filteredSales, categories, dateFrom, dateTo);
   },
 
-  renderCharts(sales, categories) {
+  renderCharts(sales, categories, dateFrom = "", dateTo = "") {
     if (typeof Chart === "undefined") return;
 
     // Destroy existing charts
@@ -2549,12 +2743,26 @@ const AdminPanel = {
     if (trendCtx) {
       const dates = [];
       const revenueByDate = {};
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const str = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        dates.push(str);
-        revenueByDate[str] = 0;
+
+      if (dateFrom && dateTo && dateFrom <= dateTo) {
+        const start = new Date(dateFrom + "T00:00:00");
+        const end = new Date(dateTo + "T00:00:00");
+        const diffDays = Math.min(31, Math.max(0, Math.round((end - start) / 86400000)));
+        for (let i = 0; i <= diffDays; i++) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          const str = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          dates.push(str);
+          revenueByDate[str] = 0;
+        }
+      } else {
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const str = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          dates.push(str);
+          revenueByDate[str] = 0;
+        }
       }
 
       sales.forEach(s => {

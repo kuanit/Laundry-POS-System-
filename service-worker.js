@@ -3,7 +3,7 @@
  * Enables PWA installability on Android tablets and caches static assets.
  */
 
-const CACHE_NAME = 'laundry-pos-v6';
+const CACHE_NAME = 'laundry-pos-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
