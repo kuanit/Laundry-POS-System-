@@ -870,6 +870,7 @@ const AdminPanel = {
     const totalOrders = allSales.length;
     const uniqueCustomers = new Set();
     let activeCount = 0;
+    let receivedCount = 0;
     let washingCount = 0;
     let dryingCount = 0;
     let readyCount = 0;
@@ -884,7 +885,8 @@ const AdminPanel = {
         claimedCount++;
       } else {
         activeCount++;
-        if (st === "WASHING") washingCount++;
+        if (st === "RECEIVED") receivedCount++;
+        else if (st === "WASHING") washingCount++;
         else if (st === "DRYING") dryingCount++;
         else if (st === "READY_FOR_PICKUP") readyCount++;
       }
@@ -903,7 +905,20 @@ const AdminPanel = {
     if (kpiTotal) kpiTotal.textContent = totalOrders.toString();
     if (kpiCust) kpiCust.textContent = `Across ${uniqueCustomers.size} unique customer${uniqueCustomers.size === 1 ? '' : 's'}`;
     if (kpiActive) kpiActive.textContent = activeCount.toString();
-    if (kpiActiveSub) kpiActiveSub.textContent = `${washingCount} washing, ${dryingCount} drying`;
+    
+    // Dynamic descriptive breakdown for active orders
+    if (kpiActiveSub) {
+      if (activeCount === 0) {
+        kpiActiveSub.textContent = "All orders completed";
+      } else {
+        const parts = [];
+        if (receivedCount > 0) parts.push(`${receivedCount} received`);
+        if (washingCount > 0) parts.push(`${washingCount} washing`);
+        if (dryingCount > 0) parts.push(`${dryingCount} drying`);
+        kpiActiveSub.textContent = parts.length > 0 ? parts.join(", ") : `${activeCount} in-progress`;
+      }
+    }
+
     if (kpiReady) kpiReady.textContent = readyCount.toString();
     if (kpiClaimed) kpiClaimed.textContent = claimedCount.toString();
     if (kpiRate) kpiRate.textContent = `${completionRate}% completed`;
@@ -945,21 +960,14 @@ const AdminPanel = {
     if (window.lucide) lucide.createIcons();
   },
 
-  renderTrackerHistoryTable(sales) {
-    const tbody = document.getElementById("admin-tracker-history-tbody");
-    if (!tbody) return;
-
-    if (sales.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="10" class="text-center text-muted" style="padding: 2.5rem 1rem;">
-            <i data-lucide="history" style="width:36px; height:36px; opacity:0.4; margin-bottom:8px; display:inline-block;"></i>
-            <p style="margin:0; font-weight:600;">No customer laundry orders found matching the filter.</p>
-          </td>
-        </tr>
-      `;
-      return;
-    }
+  renderTrackerStatusWithProgress(currentStatus) {
+    const stages = [
+      { key: "RECEIVED", label: "Received 📥", name: "Received", step: 1 },
+      { key: "WASHING", label: "Washing 🧼", name: "Washing", step: 2 },
+      { key: "DRYING", label: "Drying 🌀", name: "Drying", step: 3 },
+      { key: "READY_FOR_PICKUP", label: "Ready ✅", name: "Ready", step: 4 },
+      { key: "CLAIMED", label: "Claimed 🧺", name: "Claimed", step: 5 }
+    ];
 
     const statusBadgeClass = {
       RECEIVED: "status-received",
@@ -969,20 +977,81 @@ const AdminPanel = {
       CLAIMED: "status-claimed"
     };
 
-    const statusDisplayLabel = {
-      RECEIVED: "Received 📥",
-      WASHING: "Washing 🧼",
-      DRYING: "Drying 🌀",
-      READY_FOR_PICKUP: "Ready ✅",
-      CLAIMED: "Claimed 🧺"
-    };
+    const currentIdx = stages.findIndex(s => s.key === currentStatus);
+    const effectiveIdx = currentIdx >= 0 ? currentIdx : 0;
+    const currentStage = stages[effectiveIdx];
+    const badgeCls = statusBadgeClass[currentStatus] || "status-received";
+
+    let dotsHtml = `<div class="stepper-dots-track" title="Status: ${currentStage.name} (Step ${effectiveIdx + 1} of 5)">`;
+    stages.forEach((st, idx) => {
+      let dotClass = "pending";
+      if (idx < effectiveIdx || currentStatus === "CLAIMED") {
+        dotClass = "completed";
+      } else if (idx === effectiveIdx) {
+        dotClass = "current";
+        if (currentStatus === "READY_FOR_PICKUP") dotClass += " dot-ready";
+      }
+
+      dotsHtml += `
+        <div class="stepper-dot-node" title="Step ${idx + 1}: ${st.name}">
+          <span class="stepper-dot ${dotClass}"></span>
+        </div>
+      `;
+
+      if (idx < stages.length - 1) {
+        let lineClass = "stepper-line";
+        if (idx < effectiveIdx || currentStatus === "CLAIMED") {
+          lineClass += " completed";
+        } else if (idx === effectiveIdx - 1) {
+          lineClass += " current-line";
+        }
+        dotsHtml += `<span class="${lineClass}"></span>`;
+      }
+    });
+    dotsHtml += `</div>`;
+
+    return `
+      <div class="status-progress-cell">
+        <div class="status-badge-row">
+          <span class="status-step-pill ${badgeCls}">
+            ${currentStage.label}
+          </span>
+          <span class="status-step-count">Step ${effectiveIdx + 1} of 5</span>
+        </div>
+        ${dotsHtml}
+      </div>
+    `;
+  },
+
+  renderTrackerHistoryTable(sales) {
+    const tbody = document.getElementById("admin-tracker-history-tbody");
+    if (!tbody) return;
+
+    if (sales.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center text-muted" style="padding: 2.5rem 1rem;">
+            <i data-lucide="history" style="width:36px; height:36px; opacity:0.4; margin-bottom:8px; display:inline-block;"></i>
+            <p style="margin:0; font-weight:600;">No customer laundry orders found matching the filter.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
 
     let html = "";
     sales.forEach(sale => {
       const currentStatus = sale.laundryStatus || "RECEIVED";
-      const badgeCls = statusBadgeClass[currentStatus] || "status-received";
-      const statusLabel = statusDisplayLabel[currentStatus] || currentStatus;
 
+      // Title case customer name (e.g. "christine" -> "Christine")
+      const rawName = (sale.customerName || "Walk-in").trim();
+      const formattedName = rawName.split(/\s+/).map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : "").join(" ");
+
+      // Clean phone check
+      const rawPhone = (sale.customerPhone || "").trim();
+      const hasPhone = rawPhone && rawPhone.toLowerCase() !== "none" && rawPhone.toLowerCase() !== "null";
+
+      // Order created datetime
       let orderedDateStr = "—";
       let orderedTimeStr = "";
       if (sale.createdAt) {
@@ -993,67 +1062,83 @@ const AdminPanel = {
         }
       }
 
+      // Promised due date
       const dueFormatted = sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
       }) : "Standard (48h)";
 
+      // Claimed date & info
       const claimedInfo = this.getClaimedDateInfo(sale);
-      let claimedDateHtml = "";
-      if (claimedInfo) {
-        claimedDateHtml = `
-          <span class="text-sm font-bold text-success">${claimedInfo.dateStr}</span>
-          <br><small class="text-muted"><i data-lucide="clock" style="width:11px;height:11px;vertical-align:-1px;"></i> ${claimedInfo.timeStr}</small>
-        `;
-      } else {
-        claimedDateHtml = `<span class="text-muted text-sm">— <small>(Pending)</small></span>`;
-      }
-
-      const itemsSummary = sale.items.map(it => `${it.quantity}${it.unit || 'pc'} ${it.productName}`).join("<br>");
-      const weightDisplay = sale.totalWeight ? `<b>${sale.totalWeight} kg</b>` : "—";
       const turnaroundHtml = this.formatTurnaround(sale);
-      const stepperHtml = this.renderMiniStepper(currentStatus);
+
+      // Unified status & visual progress dots
+      const statusCellHtml = this.renderTrackerStatusWithProgress(currentStatus);
+
+      // Item count & weight
+      const totalItemsCount = (sale.items || []).reduce((acc, it) => acc + (it.quantity || 1), 0);
 
       html += `
         <tr>
+          <!-- 1. CLAIM # -->
           <td>
-            <span class="claim-tag-number">${sale.claimNumber || '#' + sale.transactionNumber}</span><br>
-            <small class="text-muted">Txn #${sale.transactionNumber}</small>
+            <span class="claim-tag-number">${sale.claimNumber || '#' + sale.transactionNumber}</span>
+            <div class="th-txn-sub">Txn #${sale.transactionNumber}</div>
           </td>
+
+          <!-- 2. CUSTOMER -->
           <td>
-            <b style="color:var(--text-primary); cursor:pointer;" onclick="AdminPanel.filterByCustomer('${(sale.customerName || '').replace(/'/g, "\\'")}')" title="Filter this customer's orders">
-              ${sale.customerName || 'Walk-in'}
-            </b><br>
-            <small class="text-muted"><i data-lucide="phone" style="width:11px;height:11px;vertical-align:-1px;"></i> ${sale.customerPhone || 'None'}</small>
-          </td>
-          <td>
-            <span class="status-quick-select ${badgeCls}" style="display:inline-block; font-weight:700; padding:3px 8px; border-radius:6px; font-size:0.75rem;">
-              ${statusLabel}
-            </span>
-          </td>
-          <td>
-            ${stepperHtml}
-          </td>
-          <td>
-            <div style="font-weight: 800; font-size: 0.95rem; color: var(--success); line-height: 1.2;">
-              ₱${sale.total.toFixed(2)}
+            <b class="th-customer-name" onclick="AdminPanel.filterByCustomer('${rawName.replace(/'/g, "\\'")}')" title="Filter this customer's orders">
+              ${formattedName}
+            </b>
+            <div class="th-customer-phone ${hasPhone ? '' : 'no-phone'}">
+              ${hasPhone ? `<i data-lucide="phone" style="width:11px;height:11px;"></i> ${rawPhone}` : 'No phone'}
             </div>
-            <div class="text-xs text-muted" style="margin-top: 2px;">
-              ${sale.totalWeight ? `<b>${sale.totalWeight} kg</b>` : 'Weight: —'}
+          </td>
+
+          <!-- 3. STATUS & PROGRESS -->
+          <td>
+            ${statusCellHtml}
+          </td>
+
+          <!-- 4. TOTAL & WEIGHT -->
+          <td>
+            <div class="th-order-price">₱${sale.total.toFixed(2)}</div>
+            <div class="th-order-meta">
+              ${sale.totalWeight ? `<b>${sale.totalWeight} kg</b> &bull; ` : ''}${totalItemsCount} ${totalItemsCount === 1 ? 'item' : 'items'}
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.showOrderServicesModal('${sale.id}')" style="margin-top: 5px; padding: 2px 8px; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px;" title="View Services & Items Details">
-              <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Details
+            <button type="button" class="btn btn-secondary btn-sm th-details-btn" onclick="AdminPanel.showOrderServicesModal('${sale.id}')" title="View Services & Items Details">
+              <i data-lucide="layers" style="width: 11px; height: 11px;"></i> Details
             </button>
           </td>
+
+          <!-- 5. SCHEDULE & TURNAROUND -->
           <td>
-            <span class="text-sm font-bold">${orderedDateStr}</span>
-            ${orderedTimeStr ? `<br><small class="text-muted">${orderedTimeStr}</small>` : ''}
+            <div class="schedule-stack">
+              <div class="schedule-row">
+                <span class="schedule-badge in">In</span>
+                <span>${orderedDateStr} <span class="text-muted" style="font-size:0.73rem;">${orderedTimeStr}</span></span>
+              </div>
+              <div class="schedule-row">
+                <span class="schedule-badge due">Due</span>
+                <span class="text-warning font-semibold">${dueFormatted}</span>
+              </div>
+              <div class="schedule-row">
+                ${claimedInfo ? `
+                  <span class="schedule-badge out">Out</span>
+                  <span class="text-success font-semibold">${claimedInfo.dateStr} <span class="text-muted" style="font-size:0.73rem;">${claimedInfo.timeStr}</span></span>
+                  <span class="th-turnaround-inline">${turnaroundHtml}</span>
+                ` : `
+                  <span class="schedule-badge time">Time</span>
+                  <span class="th-turnaround-inline">${turnaroundHtml}</span>
+                `}
+              </div>
+            </div>
           </td>
-          <td><span class="text-warning text-sm font-bold">${dueFormatted}</span></td>
-          <td>${claimedDateHtml}</td>
-          <td>${turnaroundHtml}</td>
+
+          <!-- 6. ACTIONS -->
           <td class="text-right">
-            <div style="display:flex; justify-content:flex-end; gap:6px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.openTrackerTimelineModal('${sale.id}')" title="View Detailed Status Milestone Trail">
+            <div class="th-actions-group">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.openTrackerTimelineModal('${sale.id}')" title="Milestone Audit Trail">
                 <i data-lucide="route"></i> Timeline
               </button>
               <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.viewPastReceipt('${sale.id}')" title="View & Print Claim Stub">
@@ -1085,13 +1170,16 @@ const AdminPanel = {
     // Group sales by customer
     const customerGroups = {};
     sales.forEach(sale => {
-      const name = (sale.customerName || "Walk-in Customer").trim();
-      const phone = (sale.customerPhone || "").trim();
-      const key = `${name.toLowerCase()}___${phone}`;
+      const rawName = (sale.customerName || "Walk-in Customer").trim();
+      const formattedName = rawName.split(/\s+/).map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : "").join(" ");
+      const rawPhone = (sale.customerPhone || "").trim();
+      const phone = (rawPhone && rawPhone.toLowerCase() !== "none" && rawPhone.toLowerCase() !== "null") ? rawPhone : "";
+      const key = `${rawName.toLowerCase()}___${phone}`;
 
       if (!customerGroups[key]) {
         customerGroups[key] = {
-          name: name,
+          name: formattedName,
+          rawName: rawName,
           phone: phone,
           orders: [],
           totalKg: 0,

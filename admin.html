@@ -344,7 +344,54 @@
 
         <!-- 2.5 TRACKER HISTORY TAB (TRACKING STATUS FOR EACH CUSTOMER) -->
         <div id="tab-tracker-history" class="tab-pane">
-          <div class="section-toolbar">
+          <!-- Key Metrics Grid for Customer Tracker History -->
+          <div class="metrics-grid">
+            <div class="metric-card card-revenue">
+              <div class="metric-icon-box">
+                <i data-lucide="history"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">TOTAL TRACKED LAUNDRY</span>
+                <h2 class="metric-value" id="th-kpi-total-orders">0</h2>
+                <span class="metric-subtext" id="th-kpi-total-customers">Across 0 unique customers</span>
+              </div>
+            </div>
+
+            <div class="metric-card card-orders">
+              <div class="metric-icon-box" style="background:rgba(59, 130, 246, 0.15); color:#3b82f6;">
+                <i data-lucide="sparkles"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">CURRENTLY IN-PROGRESS</span>
+                <h2 class="metric-value" id="th-kpi-active-orders">0</h2>
+                <span class="metric-subtext" id="th-kpi-active-subtext">0 active</span>
+              </div>
+            </div>
+
+            <div class="metric-card card-alert" style="border-color:rgba(16, 185, 129, 0.4);">
+              <div class="metric-icon-box" style="background:var(--success-light); color:var(--success);">
+                <i data-lucide="check-circle-2"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">READY FOR PICKUP</span>
+                <h2 class="metric-value text-success" id="th-kpi-ready-orders">0</h2>
+                <span class="metric-subtext">Awaiting customer collection</span>
+              </div>
+            </div>
+
+            <div class="metric-card card-products">
+              <div class="metric-icon-box">
+                <i data-lucide="package-check"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">CLAIMED & COMPLETED</span>
+                <h2 class="metric-value" id="th-kpi-claimed-orders">0</h2>
+                <span class="metric-subtext" id="th-kpi-completion-rate">0% completed</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-toolbar mt-4">
             <div class="toolbar-left" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
               <div class="search-box-wrapper mini">
                 <i data-lucide="search" class="search-icon"></i>
@@ -392,69 +439,18 @@
             </div>
           </div>
 
-          <!-- Key Metrics Grid for Customer Tracker History -->
-          <div class="metrics-grid mt-3">
-            <div class="metric-card card-revenue">
-              <div class="metric-icon-box">
-                <i data-lucide="history"></i>
-              </div>
-              <div class="metric-content">
-                <span class="metric-label">TOTAL TRACKED LAUNDRY</span>
-                <h2 class="metric-value" id="th-kpi-total-orders">0</h2>
-                <span class="metric-subtext" id="th-kpi-total-customers">Across 0 unique customers</span>
-              </div>
-            </div>
-
-            <div class="metric-card card-orders">
-              <div class="metric-icon-box" style="background:rgba(59, 130, 246, 0.15); color:#3b82f6;">
-                <i data-lucide="sparkles"></i>
-              </div>
-              <div class="metric-content">
-                <span class="metric-label">CURRENTLY IN-PROGRESS</span>
-                <h2 class="metric-value" id="th-kpi-active-orders">0</h2>
-                <span class="metric-subtext" id="th-kpi-active-subtext">0 washing, 0 drying</span>
-              </div>
-            </div>
-
-            <div class="metric-card card-alert" style="border-color:rgba(16, 185, 129, 0.4);">
-              <div class="metric-icon-box" style="background:var(--success-light); color:var(--success);">
-                <i data-lucide="check-circle-2"></i>
-              </div>
-              <div class="metric-content">
-                <span class="metric-label">READY FOR PICKUP</span>
-                <h2 class="metric-value text-success" id="th-kpi-ready-orders">0</h2>
-                <span class="metric-subtext">Awaiting customer collection</span>
-              </div>
-            </div>
-
-            <div class="metric-card card-products">
-              <div class="metric-icon-box">
-                <i data-lucide="package-check"></i>
-              </div>
-              <div class="metric-content">
-                <span class="metric-label">CLAIMED & COMPLETED</span>
-                <h2 class="metric-value" id="th-kpi-claimed-orders">0</h2>
-                <span class="metric-subtext" id="th-kpi-completion-rate">0% completed</span>
-              </div>
-            </div>
-          </div>
-
           <!-- View 1: Detailed Table View -->
           <div id="tracker-history-table-view" class="panel-body card-container mt-3">
             <div class="table-responsive">
-              <table class="data-table">
+              <table class="data-table th-table">
                 <thead>
                   <tr>
-                    <th>Claim #</th>
-                    <th>Customer Name & Contact</th>
-                    <th>Current Status</th>
-                    <th>Milestone Stepper Trail</th>
-                    <th>Services & Weight</th>
-                    <th>Date Received</th>
-                    <th>Promised Due</th>
-                    <th>Date Claimed</th>
-                    <th>Turnaround</th>
-                    <th class="text-right">Timeline & Stub</th>
+                    <th style="width: 120px;">Claim #</th>
+                    <th style="width: 170px;">Customer</th>
+                    <th style="min-width: 215px;">Status & Progress</th>
+                    <th style="width: 145px;">Total & Weight</th>
+                    <th style="min-width: 245px;">Schedule & Turnaround</th>
+                    <th class="text-right" style="width: 165px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="admin-tracker-history-tbody">
