@@ -681,6 +681,15 @@ const CashierPOS = {
       customerName: customerName,
       customerPhone: customerPhone,
       laundryStatus: "RECEIVED", // Initial state
+      statusHistory: [
+        {
+          status: "RECEIVED",
+          timestamp: new Date().toISOString(),
+          updatedBy: currentUser ? currentUser.fullName : "Cashier",
+          note: "Order received & claim stub generated"
+        }
+      ],
+      receivedAt: new Date().toISOString(),
       dueDate: dueDate,
       specialInstructions: specialInstructions,
       totalWeight: totalWeight,
@@ -1283,6 +1292,46 @@ const CashierPOS = {
     const data = StorageManager.get();
     const sale = (data.sales || []).find(s => s.id === saleId);
     if (!sale) return;
+
+    const oldStatus = sale.laundryStatus || "RECEIVED";
+    if (oldStatus !== newStatus) {
+      if (!Array.isArray(sale.statusHistory)) {
+        sale.statusHistory = [
+          {
+            status: "RECEIVED",
+            timestamp: sale.createdAt || new Date().toISOString(),
+            updatedBy: sale.cashierName || "Cashier",
+            note: "Order created"
+          }
+        ];
+      }
+
+      const currentUser = (typeof Auth !== "undefined" && Auth.getUser) ? Auth.getUser() : null;
+      const updatedByName = currentUser ? (currentUser.fullName || currentUser.username) : (sale.cashierName || "Cashier");
+      const nowIso = new Date().toISOString();
+
+      const stageNotes = {
+        RECEIVED: "Order marked as received at counter",
+        WASHING: "Batch loaded into washing machine",
+        DRYING: "Transferred to commercial tumble dryer",
+        READY_FOR_PICKUP: "Folded, packaged & ready for customer pickup",
+        CLAIMED: "Laundry claimed & released to customer"
+      };
+
+      sale.statusHistory.push({
+        status: newStatus,
+        timestamp: nowIso,
+        updatedBy: updatedByName,
+        note: stageNotes[newStatus] || `Status updated to ${newStatus.replace(/_/g, ' ')}`
+      });
+
+      if (newStatus === "READY_FOR_PICKUP" && !sale.readyAt) {
+        sale.readyAt = nowIso;
+      }
+      if (newStatus === "CLAIMED" && !sale.claimedAt) {
+        sale.claimedAt = nowIso;
+      }
+    }
 
     sale.laundryStatus = newStatus;
     StorageManager.save(data);

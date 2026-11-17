@@ -9,6 +9,9 @@ const AdminPanel = {
   adjustType: "ADD", // 'ADD', 'SUB', 'SET'
   charts: {},
   laundryFilterStatus: "ALL",
+  trackerHistoryFilterStatus: "ALL",
+  trackerHistoryViewMode: "table", // 'table' or 'customer'
+  _activeTimelineSaleId: null,
   selectedProductCategory: "ALL",
   productViewMode: "grid",
   attendanceMonth: new Date().toISOString().slice(0, 7), // "YYYY-MM"
@@ -37,6 +40,7 @@ const AdminPanel = {
         this.populateCategorySelects();
         if (this.currentTab === "dashboard") this.renderDashboard();
         else if (this.currentTab === "orders" || this.currentTab === "laundry") (this.renderLaundryOrders ? this.renderLaundryOrders() : this.renderLaundryTable());
+        else if (this.currentTab === "tracker-history") this.renderTrackerHistory();
         else if ((this.currentTab === "catalog" || this.currentTab === "products") && !this._activeDragCardId) (this.renderProducts ? this.renderProducts() : this.renderProductsTable());
         else if (this.currentTab === "categories") this.renderCategories();
         else if (this.currentTab === "inventory") (this.renderInventory ? this.renderInventory() : this.renderInventoryTable());
@@ -169,6 +173,7 @@ const AdminPanel = {
     const titles = {
       dashboard: ["Dashboard Overview", "Real-time laundry store metrics and operational status"],
       laundry: ["Laundry Tracker & Pickups", "Manage active laundry batches, stages, and customer releases"],
+      'tracker-history': ["Customer Laundry Tracker History", "Complete milestone history and status audit trail for each customer's laundry"],
       products: ["Services & Products Catalog", "Manage wash services, dry clean rates, and retail supplies"],
       categories: ["Service Categories", "Organize services into Wash & Fold, Dry Clean, Steam Press, Bulky, Supplies"],
       inventory: ["Supplies & Retail Inventory", "Monitor detergent, softener, and garment bag stock levels"],
@@ -187,6 +192,7 @@ const AdminPanel = {
     // Refresh active tab contents
     if (tabName === "dashboard") this.renderDashboard();
     if (tabName === "laundry") this.renderLaundryTable();
+    if (tabName === "tracker-history") this.renderTrackerHistory();
     if (tabName === "products") this.renderProductsTable();
     if (tabName === "categories") this.renderCategories();
     if (tabName === "inventory") {
@@ -259,6 +265,11 @@ const AdminPanel = {
     if (sidebarAttendanceBadge) {
       sidebarAttendanceBadge.textContent = `${activeStaffCount} on duty`;
       sidebarAttendanceBadge.style.display = activeStaffCount > 0 ? "inline-block" : "none";
+    }
+    const sidebarTrackerBadge = document.getElementById("sidebar-tracker-history-count");
+    if (sidebarTrackerBadge) {
+      sidebarTrackerBadge.textContent = sales.length.toString();
+      sidebarTrackerBadge.style.display = sales.length > 0 ? "inline-block" : "none";
     }
 
     // Render Recent Transactions
@@ -570,13 +581,895 @@ const AdminPanel = {
     const sale = (data.sales || []).find(s => s.id === saleId);
     if (!sale) return;
 
+    const oldStatus = sale.laundryStatus || "RECEIVED";
+    if (oldStatus !== newStatus) {
+      if (!Array.isArray(sale.statusHistory)) {
+        sale.statusHistory = [
+          {
+            status: "RECEIVED",
+            timestamp: sale.createdAt || new Date().toISOString(),
+            updatedBy: sale.cashierName || "Cashier",
+            note: "Order created"
+          }
+        ];
+      }
+
+      const currentUser = App.getCurrentUser();
+      const updatedByName = currentUser ? (currentUser.fullName || currentUser.username) : "Administrator";
+      const nowIso = new Date().toISOString();
+
+      const stageNotes = {
+        RECEIVED: "Order marked as received at counter",
+        WASHING: "Loaded into commercial washing machine",
+        DRYING: "Transferred to commercial tumble dryer",
+        READY_FOR_PICKUP: "Folded, packaged & ready for customer pickup",
+        CLAIMED: "Laundry claimed & released to customer"
+      };
+
+      sale.statusHistory.push({
+        status: newStatus,
+        timestamp: nowIso,
+        updatedBy: updatedByName,
+        note: stageNotes[newStatus] || `Status updated to ${newStatus.replace(/_/g, ' ')}`
+      });
+
+      if (newStatus === "READY_FOR_PICKUP" && !sale.readyAt) {
+        sale.readyAt = nowIso;
+      }
+      if (newStatus === "CLAIMED" && !sale.claimedAt) {
+        sale.claimedAt = nowIso;
+      }
+    }
+
     sale.laundryStatus = newStatus;
     StorageManager.save(data);
 
     Sound.playSuccess();
     this.renderLaundryTable();
+    if (this.currentTab === "tracker-history") this.renderTrackerHistory();
     this.renderDashboard();
     App.showToast(`Updated Claim #${sale.claimNumber || sale.transactionNumber} to ${newStatus.replace(/_/g, ' ')}`, "success");
+  },
+
+  /* =========================================================
+     2.5 LAUNDRY TRACKER HISTORY TAB (STATUS AUDIT PER CUSTOMER)
+     ========================================================= */
+
+  getSaleStatusHistory(sale) {
+    if (!sale) return [];
+    if (Array.isArray(sale.statusHistory) && sale.statusHistory.length > 0) {
+      return sale.statusHistory;
+    }
+    // Backward compatibility for existing records: synthesize progression
+    const createdTime = new Date(sale.createdAt || Date.now()).getTime();
+    const history = [
+      {
+        status: "RECEIVED",
+        timestamp: sale.createdAt || new Date().toISOString(),
+        updatedBy: sale.cashierName || "Cashier",
+        note: "Order received & claim tag generated"
+      }
+    ];
+
+    const currentStatus = sale.laundryStatus || "RECEIVED";
+    const stages = ["WASHING", "DRYING", "READY_FOR_PICKUP", "CLAIMED"];
+    const currentIdx = stages.indexOf(currentStatus);
+
+    if (currentIdx >= 0) {
+      history.push({
+        status: "WASHING",
+        timestamp: new Date(createdTime + 20 * 60000).toISOString(),
+        updatedBy: sale.cashierName || "Staff",
+        note: "Sorted and placed in commercial washer"
+      });
+    }
+    if (currentIdx >= 1) {
+      history.push({
+        status: "DRYING",
+        timestamp: new Date(createdTime + 70 * 60000).toISOString(),
+        updatedBy: sale.cashierName || "Staff",
+        note: "Wash completed; transferred to tumble dryer"
+      });
+    }
+    if (currentIdx >= 2) {
+      const readyTime = sale.readyAt ? new Date(sale.readyAt).toISOString() :
+        (sale.dueDate ? new Date(new Date(sale.dueDate).getTime() - 2 * 3600000).toISOString() : new Date(createdTime + 150 * 60000).toISOString());
+      history.push({
+        status: "READY_FOR_PICKUP",
+        timestamp: readyTime,
+        updatedBy: sale.cashierName || "Staff",
+        note: "Drying finished, folded, bagged & tagged ready"
+      });
+    }
+    if (currentIdx >= 3) {
+      const claimedTime = sale.claimedAt ? new Date(sale.claimedAt).toISOString() :
+        (sale.dueDate || new Date(createdTime + 24 * 3600000).toISOString());
+      history.push({
+        status: "CLAIMED",
+        timestamp: claimedTime,
+        updatedBy: sale.cashierName || "Cashier",
+        note: "Claim stub verified; laundry released to customer"
+      });
+    }
+
+    return history;
+  },
+
+  renderMiniStepper(currentStatus) {
+    const stages = [
+      { key: "RECEIVED", label: "Received", icon: "inbox" },
+      { key: "WASHING", label: "Washing", icon: "sparkles" },
+      { key: "DRYING", label: "Drying", icon: "fan" },
+      { key: "READY_FOR_PICKUP", label: "Ready", icon: "check-circle" },
+      { key: "CLAIMED", label: "Claimed", icon: "package-check" }
+    ];
+
+    const currentIdx = stages.findIndex(s => s.key === currentStatus);
+    const effectiveIdx = currentIdx >= 0 ? currentIdx : 0;
+
+    let html = `<div class="mini-stepper">`;
+    stages.forEach((st, idx) => {
+      let stateClass = "";
+      if (idx < effectiveIdx) {
+        stateClass = "completed";
+      } else if (idx === effectiveIdx) {
+        stateClass = "current";
+      } else {
+        stateClass = "pending";
+      }
+
+      html += `
+        <span class="mini-stepper-step ${stateClass}" title="${st.label}">
+          <i data-lucide="${st.icon}"></i>
+          <span>${st.label}</span>
+        </span>
+      `;
+      if (idx < stages.length - 1) {
+        html += `<span class="mini-stepper-arrow">&rarr;</span>`;
+      }
+    });
+    html += `</div>`;
+    return html;
+  },
+
+  formatTurnaround(sale) {
+    if (!sale || !sale.createdAt) return "--";
+    const start = new Date(sale.createdAt).getTime();
+    if (isNaN(start)) return "--";
+
+    let end = null;
+    const isCompleted = sale.laundryStatus === "CLAIMED";
+    if (isCompleted) {
+      if (sale.claimedAt) {
+        end = new Date(sale.claimedAt).getTime();
+      } else if (Array.isArray(sale.statusHistory)) {
+        const claimedEntry = sale.statusHistory.slice().reverse().find(h => h.status === "CLAIMED");
+        if (claimedEntry && claimedEntry.timestamp) {
+          end = new Date(claimedEntry.timestamp).getTime();
+        }
+      }
+      if (!end || isNaN(end)) {
+        end = sale.dueDate ? new Date(sale.dueDate).getTime() : (start + 24 * 3600000);
+      }
+    } else {
+      end = Date.now();
+    }
+
+    const diffMinutes = Math.max(1, Math.round((end - start) / 60000));
+    const hours = Math.floor(diffMinutes / 60);
+    const mins = diffMinutes % 60;
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+
+    let timeStr = "";
+    if (days > 0) {
+      timeStr = `${days}d ${remHours}h`;
+    } else if (hours > 0) {
+      timeStr = `${hours}h ${mins}m`;
+    } else {
+      timeStr = `${mins}m`;
+    }
+
+    if (isCompleted) {
+      return `<span class="badge-turnaround completed" title="Completed in ${timeStr}"><i data-lucide="check"></i> ${timeStr}</span>`;
+    } else {
+      return `<span class="badge-turnaround ongoing" title="Elapsed processing time: ${timeStr}"><i data-lucide="clock"></i> ${timeStr}</span>`;
+    }
+  },
+
+  filterTrackerHistoryStatus(status) {
+    this.trackerHistoryFilterStatus = status;
+    document.querySelectorAll("#tab-tracker-history .btn-group .btn").forEach(btn => btn.classList.remove("active"));
+    const activeBtn = document.getElementById(`btn-adm-th-${status.toLowerCase().replace(/_/g, '-')}`);
+    if (activeBtn) activeBtn.classList.add("active");
+    this.renderTrackerHistory();
+  },
+
+  onTrackerHistoryPeriodChange() {
+    this.applyPeriodToDateInputs("admin-th-period-filter", "admin-th-date-from", "admin-th-date-to");
+    this.renderTrackerHistory();
+  },
+
+  onTrackerHistoryCustomDateChange() {
+    const periodEl = document.getElementById("admin-th-period-filter");
+    const fromVal = document.getElementById("admin-th-date-from")?.value || "";
+    const toVal = document.getElementById("admin-th-date-to")?.value || "";
+    if (periodEl) {
+      periodEl.value = (fromVal || toVal) ? "custom" : "all";
+    }
+    this.renderTrackerHistory();
+  },
+
+  clearTrackerHistoryDateFilter() {
+    const periodEl = document.getElementById("admin-th-period-filter");
+    const fromEl = document.getElementById("admin-th-date-from");
+    const toEl = document.getElementById("admin-th-date-to");
+    if (periodEl) periodEl.value = "all";
+    if (fromEl) fromEl.value = "";
+    if (toEl) toEl.value = "";
+    this.renderTrackerHistory();
+  },
+
+  filterTrackerHistory() {
+    this.renderTrackerHistory();
+  },
+
+  switchTrackerHistoryView(viewMode) {
+    this.trackerHistoryViewMode = viewMode;
+    const btnTable = document.getElementById("btn-th-view-table");
+    const btnCustomer = document.getElementById("btn-th-view-customer");
+    const tableView = document.getElementById("tracker-history-table-view");
+    const customerView = document.getElementById("tracker-history-customer-view");
+
+    if (btnTable) btnTable.classList.toggle("active", viewMode === "table");
+    if (btnCustomer) btnCustomer.classList.toggle("active", viewMode === "customer");
+
+    if (tableView) tableView.style.display = viewMode === "table" ? "block" : "none";
+    if (customerView) customerView.style.display = viewMode === "customer" ? "grid" : "none";
+
+    this.renderTrackerHistory();
+  },
+
+  filterByCustomer(customerName) {
+    const searchInput = document.getElementById("admin-th-search");
+    if (searchInput) {
+      searchInput.value = customerName;
+    }
+    this.switchTrackerHistoryView("table");
+  },
+
+  renderTrackerHistory() {
+    const data = StorageManager.get();
+    const allSales = data.sales || [];
+
+    // Calculate Summary KPIs
+    const totalOrders = allSales.length;
+    const uniqueCustomers = new Set();
+    let activeCount = 0;
+    let washingCount = 0;
+    let dryingCount = 0;
+    let readyCount = 0;
+    let claimedCount = 0;
+
+    allSales.forEach(s => {
+      const cName = (s.customerName || "Walk-in").trim();
+      uniqueCustomers.add(cName.toLowerCase());
+
+      const st = s.laundryStatus || "RECEIVED";
+      if (st === "CLAIMED") {
+        claimedCount++;
+      } else {
+        activeCount++;
+        if (st === "WASHING") washingCount++;
+        else if (st === "DRYING") dryingCount++;
+        else if (st === "READY_FOR_PICKUP") readyCount++;
+      }
+    });
+
+    const completionRate = totalOrders > 0 ? Math.round((claimedCount / totalOrders) * 100) : 0;
+
+    const kpiTotal = document.getElementById("th-kpi-total-orders");
+    const kpiCust = document.getElementById("th-kpi-total-customers");
+    const kpiActive = document.getElementById("th-kpi-active-orders");
+    const kpiActiveSub = document.getElementById("th-kpi-active-subtext");
+    const kpiReady = document.getElementById("th-kpi-ready-orders");
+    const kpiClaimed = document.getElementById("th-kpi-claimed-orders");
+    const kpiRate = document.getElementById("th-kpi-completion-rate");
+
+    if (kpiTotal) kpiTotal.textContent = totalOrders.toString();
+    if (kpiCust) kpiCust.textContent = `Across ${uniqueCustomers.size} unique customer${uniqueCustomers.size === 1 ? '' : 's'}`;
+    if (kpiActive) kpiActive.textContent = activeCount.toString();
+    if (kpiActiveSub) kpiActiveSub.textContent = `${washingCount} washing, ${dryingCount} drying`;
+    if (kpiReady) kpiReady.textContent = readyCount.toString();
+    if (kpiClaimed) kpiClaimed.textContent = claimedCount.toString();
+    if (kpiRate) kpiRate.textContent = `${completionRate}% completed`;
+
+    // Filter sales according to user controls
+    let filtered = [...allSales];
+
+    // Status filter
+    if (this.trackerHistoryFilterStatus === "ACTIVE") {
+      filtered = filtered.filter(s => (s.laundryStatus || "RECEIVED") !== "CLAIMED");
+    } else if (this.trackerHistoryFilterStatus !== "ALL") {
+      filtered = filtered.filter(s => (s.laundryStatus || "RECEIVED") === this.trackerHistoryFilterStatus);
+    }
+
+    // Date filter
+    const period = document.getElementById("admin-th-period-filter")?.value || "all";
+    const dateFrom = document.getElementById("admin-th-date-from")?.value || "";
+    const dateTo = document.getElementById("admin-th-date-to")?.value || "";
+    filtered = filtered.filter(s => this.matchesDateFilter(s.createdAt, period, dateFrom, dateTo));
+
+    // Search query filter
+    const query = (document.getElementById("admin-th-search")?.value || "").trim().toLowerCase();
+    if (query) {
+      filtered = filtered.filter(s => {
+        const name = (s.customerName || "").toLowerCase();
+        const phone = (s.customerPhone || "").toLowerCase();
+        const claim = (s.claimNumber || "").toLowerCase();
+        const txn = (s.transactionNumber || "").toLowerCase();
+        return name.includes(query) || phone.includes(query) || claim.includes(query) || txn.includes(query);
+      });
+    }
+
+    if (this.trackerHistoryViewMode === "customer") {
+      this.renderTrackerHistoryCustomerView(filtered);
+    } else {
+      this.renderTrackerHistoryTable(filtered);
+    }
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  renderTrackerHistoryTable(sales) {
+    const tbody = document.getElementById("admin-tracker-history-tbody");
+    if (!tbody) return;
+
+    if (sales.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="10" class="text-center text-muted" style="padding: 2.5rem 1rem;">
+            <i data-lucide="history" style="width:36px; height:36px; opacity:0.4; margin-bottom:8px; display:inline-block;"></i>
+            <p style="margin:0; font-weight:600;">No customer laundry orders found matching the filter.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    const statusBadgeClass = {
+      RECEIVED: "status-received",
+      WASHING: "status-washing",
+      DRYING: "status-drying",
+      READY_FOR_PICKUP: "status-ready",
+      CLAIMED: "status-claimed"
+    };
+
+    const statusDisplayLabel = {
+      RECEIVED: "Received 📥",
+      WASHING: "Washing 🧼",
+      DRYING: "Drying 🌀",
+      READY_FOR_PICKUP: "Ready ✅",
+      CLAIMED: "Claimed 🧺"
+    };
+
+    let html = "";
+    sales.forEach(sale => {
+      const currentStatus = sale.laundryStatus || "RECEIVED";
+      const badgeCls = statusBadgeClass[currentStatus] || "status-received";
+      const statusLabel = statusDisplayLabel[currentStatus] || currentStatus;
+
+      let orderedDateStr = "—";
+      let orderedTimeStr = "";
+      if (sale.createdAt) {
+        const dt = new Date(sale.createdAt);
+        if (!isNaN(dt.getTime())) {
+          orderedDateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          orderedTimeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+      }
+
+      const dueFormatted = sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+      }) : "Standard (48h)";
+
+      let claimedDateStr = "—";
+      if (currentStatus === "CLAIMED") {
+        const cDate = sale.claimedAt || (sale.statusHistory && sale.statusHistory.slice().reverse().find(h => h.status === 'CLAIMED')?.timestamp);
+        if (cDate) {
+          const dt = new Date(cDate);
+          if (!isNaN(dt.getTime())) {
+            claimedDateStr = `${dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+          }
+        } else {
+          claimedDateStr = "Claimed";
+        }
+      }
+
+      const itemsSummary = sale.items.map(it => `${it.quantity}${it.unit || 'pc'} ${it.productName}`).join("<br>");
+      const weightDisplay = sale.totalWeight ? `<b>${sale.totalWeight} kg</b>` : "—";
+      const turnaroundHtml = this.formatTurnaround(sale);
+      const stepperHtml = this.renderMiniStepper(currentStatus);
+
+      html += `
+        <tr>
+          <td>
+            <span class="claim-tag-number">${sale.claimNumber || '#' + sale.transactionNumber}</span><br>
+            <small class="text-muted">Txn #${sale.transactionNumber}</small>
+          </td>
+          <td>
+            <b style="color:var(--text-primary); cursor:pointer;" onclick="AdminPanel.filterByCustomer('${(sale.customerName || '').replace(/'/g, "\\'")}')" title="Filter this customer's orders">
+              ${sale.customerName || 'Walk-in'}
+            </b><br>
+            <small class="text-muted"><i data-lucide="phone" style="width:11px;height:11px;vertical-align:-1px;"></i> ${sale.customerPhone || 'None'}</small>
+          </td>
+          <td>
+            <span class="status-quick-select ${badgeCls}" style="display:inline-block; font-weight:700; padding:3px 8px; border-radius:6px; font-size:0.75rem;">
+              ${statusLabel}
+            </span>
+          </td>
+          <td>
+            ${stepperHtml}
+          </td>
+          <td class="text-sm">
+            ${itemsSummary}
+            <div style="margin-top:2px;">${weightDisplay} • <span class="text-success font-bold">₱${sale.total.toFixed(2)}</span></div>
+          </td>
+          <td>
+            <span class="text-sm font-bold">${orderedDateStr}</span>
+            ${orderedTimeStr ? `<br><small class="text-muted">${orderedTimeStr}</small>` : ''}
+          </td>
+          <td><span class="text-warning text-sm font-bold">${dueFormatted}</span></td>
+          <td><span class="text-sm font-bold ${currentStatus === 'CLAIMED' ? 'text-success' : 'text-muted'}">${claimedDateStr}</span></td>
+          <td>${turnaroundHtml}</td>
+          <td class="text-right">
+            <div style="display:flex; justify-content:flex-end; gap:6px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.openTrackerTimelineModal('${sale.id}')" title="View Detailed Status Milestone Trail">
+                <i data-lucide="route"></i> Timeline
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.viewPastReceipt('${sale.id}')" title="View & Print Claim Stub">
+                <i data-lucide="printer"></i> Stub
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+  },
+
+  renderTrackerHistoryCustomerView(sales) {
+    const container = document.getElementById("tracker-history-customer-view");
+    if (!container) return;
+
+    if (sales.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+          <i data-lucide="users" style="width:36px; height:36px; opacity:0.4; margin-bottom:8px; display:inline-block;"></i>
+          <p style="margin:0; font-weight:600;">No customer profiles found matching the filter.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Group sales by customer
+    const customerGroups = {};
+    sales.forEach(sale => {
+      const name = (sale.customerName || "Walk-in Customer").trim();
+      const phone = (sale.customerPhone || "").trim();
+      const key = `${name.toLowerCase()}___${phone}`;
+
+      if (!customerGroups[key]) {
+        customerGroups[key] = {
+          name: name,
+          phone: phone,
+          orders: [],
+          totalKg: 0,
+          totalSpent: 0,
+          activeCount: 0,
+          latestDate: sale.createdAt
+        };
+      }
+
+      customerGroups[key].orders.push(sale);
+      customerGroups[key].totalKg += (sale.totalWeight || 0);
+      customerGroups[key].totalSpent += (sale.total || 0);
+      if ((sale.laundryStatus || "RECEIVED") !== "CLAIMED") {
+        customerGroups[key].activeCount++;
+      }
+      if (new Date(sale.createdAt) > new Date(customerGroups[key].latestDate)) {
+        customerGroups[key].latestDate = sale.createdAt;
+      }
+    });
+
+    const statusBadgeClass = {
+      RECEIVED: "status-received",
+      WASHING: "status-washing",
+      DRYING: "status-drying",
+      READY_FOR_PICKUP: "status-ready",
+      CLAIMED: "status-claimed"
+    };
+
+    let html = "";
+    Object.values(customerGroups).forEach(cust => {
+      // Sort orders latest first
+      cust.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      // Customer avatar initials
+      const initials = cust.name.split(" ").map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "WK";
+
+      const activeBadge = cust.activeCount > 0
+        ? `<span class="badge badge-active" style="font-size:0.75rem;"><i data-lucide="sparkles"></i> ${cust.activeCount} In-Progress</span>`
+        : `<span class="badge badge-success" style="font-size:0.75rem;"><i data-lucide="check-circle-2"></i> All Claimed</span>`;
+
+      let ordersHtml = "";
+      cust.orders.slice(0, 5).forEach(ord => {
+        const st = ord.laundryStatus || "RECEIVED";
+        const badgeCls = statusBadgeClass[st] || "status-received";
+        const stepperHtml = this.renderMiniStepper(st);
+        const dateStr = ord.createdAt ? new Date(ord.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—";
+        const itemsText = ord.items.map(it => `${it.quantity}${it.unit || 'pc'} ${it.productName}`).join(", ");
+
+        ordersHtml += `
+          <div class="customer-order-row">
+            <div class="customer-order-row-top">
+              <span class="customer-order-claim">${ord.claimNumber || '#' + ord.transactionNumber}</span>
+              <span class="${badgeCls}" style="font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:4px;">${st.replace(/_/g, ' ')}</span>
+            </div>
+            <div class="customer-order-row-mid">
+              ${stepperHtml}
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+              ${itemsText} • <b>₱${ord.total.toFixed(2)}</b>
+            </div>
+            <div class="customer-order-row-bottom">
+              <span style="font-size:0.72rem; color:var(--text-muted);"><i data-lucide="calendar" style="width:11px;height:11px;vertical-align:-1px;"></i> ${dateStr}</span>
+              <div style="display:flex; gap:4px;">
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.72rem;" onclick="AdminPanel.openTrackerTimelineModal('${ord.id}')">
+                  <i data-lucide="route"></i> Timeline
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.72rem;" onclick="AdminPanel.viewPastReceipt('${ord.id}')">
+                  <i data-lucide="printer"></i> Stub
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+        <div class="customer-history-card">
+          <div class="customer-card-header">
+            <div class="customer-avatar-box">
+              <div class="customer-avatar-circle">${initials}</div>
+              <div>
+                <h4 class="customer-name-heading">${cust.name}</h4>
+                <div class="customer-phone-sub">
+                  <i data-lucide="phone"></i> ${cust.phone || 'No phone recorded'}
+                </div>
+              </div>
+            </div>
+            ${activeBadge}
+          </div>
+
+          <div class="customer-metrics-strip">
+            <div class="customer-metric-col">
+              <div class="c-label">Total Orders</div>
+              <div class="c-val">${cust.orders.length}</div>
+            </div>
+            <div class="customer-metric-col">
+              <div class="c-label">Total Kilos</div>
+              <div class="c-val">${cust.totalKg.toFixed(1)} kg</div>
+            </div>
+            <div class="customer-metric-col">
+              <div class="c-label">Lifetime Spend</div>
+              <div class="c-val text-success">₱${cust.totalSpent.toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Laundry Tracker History:</span>
+            <button type="button" class="btn-link-action" style="font-size:0.75rem;" onclick="AdminPanel.filterByCustomer('${cust.name.replace(/'/g, "\\'")}')">
+              Filter in Table &rarr;
+            </button>
+          </div>
+
+          <div class="customer-orders-list">
+            ${ordersHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  },
+
+  openTrackerTimelineModal(saleId) {
+    this._activeTimelineSaleId = saleId;
+    const data = StorageManager.get();
+    const sale = (data.sales || []).find(s => s.id === saleId);
+    if (!sale) return;
+
+    const modal = document.getElementById("modal-tracker-timeline");
+    const summaryContainer = document.getElementById("th-modal-order-summary");
+    const stepperContainer = document.getElementById("th-modal-stepper");
+    const updaterContainer = document.getElementById("th-modal-status-updater");
+
+    const currentStatus = sale.laundryStatus || "RECEIVED";
+    const history = this.getSaleStatusHistory(sale);
+
+    // Summary Card
+    if (summaryContainer) {
+      const itemsList = sale.items.map(it => `<b>${it.quantity}${it.unit || 'pc'}</b> ${it.productName}`).join(" • ");
+      const turnaroundHtml = this.formatTurnaround(sale);
+      const orderedDateStr = sale.createdAt ? new Date(sale.createdAt).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+      }) : "—";
+      const dueDateStr = sale.dueDate ? new Date(sale.dueDate).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+      }) : "Standard (48 hours)";
+
+      summaryContainer.innerHTML = `
+        <div class="summary-header-row">
+          <div class="summary-customer-info">
+            <h4>${sale.customerName || 'Walk-in Customer'}</h4>
+            <p><i data-lucide="phone"></i> ${sale.customerPhone || 'No contact number'}</p>
+          </div>
+          <div class="summary-tags-row">
+            <span class="claim-tag-number">${sale.claimNumber || '#' + sale.transactionNumber}</span>
+            ${turnaroundHtml}
+          </div>
+        </div>
+        <div class="summary-details-grid">
+          <div class="summary-detail-item">
+            <span class="s-label">Current Status</span>
+            <span class="s-val text-primary">${currentStatus.replace(/_/g, ' ')}</span>
+          </div>
+          <div class="summary-detail-item">
+            <span class="s-label">Total Weight</span>
+            <span class="s-val">${sale.totalWeight ? sale.totalWeight + ' kg' : '—'}</span>
+          </div>
+          <div class="summary-detail-item">
+            <span class="s-label">Total Paid</span>
+            <span class="s-val text-success">₱${sale.total.toFixed(2)} (${sale.paymentMethod || 'CASH'})</span>
+          </div>
+          <div class="summary-detail-item">
+            <span class="s-label">Date Ordered</span>
+            <span class="s-val">${orderedDateStr}</span>
+          </div>
+          <div class="summary-detail-item">
+            <span class="s-label">Promised Due</span>
+            <span class="s-val text-warning">${dueDateStr}</span>
+          </div>
+          <div class="summary-detail-item">
+            <span class="s-label">Staff / Cashier</span>
+            <span class="s-val">${sale.cashierName || 'Cashier'}</span>
+          </div>
+        </div>
+        <div style="font-size:0.78rem; color:var(--text-secondary); padding-top:6px; border-top:1px dashed var(--border-color);">
+          <span style="color:var(--text-muted); font-size:0.7rem; text-transform:uppercase;">Services:</span> ${itemsList}
+        </div>
+      `;
+    }
+
+    // Vertical Timeline Stepper
+    if (stepperContainer) {
+      const stageDefinitions = [
+        {
+          key: "RECEIVED",
+          title: "Order Intake & Tagging",
+          icon: "inbox",
+          defaultNote: "Laundry received, weighed, sorted & tagged with claim number."
+        },
+        {
+          key: "WASHING",
+          title: "Commercial Washing Stage",
+          icon: "sparkles",
+          defaultNote: "Loaded into commercial washing machine with selected detergent."
+        },
+        {
+          key: "DRYING",
+          title: "Commercial Drying Cycle",
+          icon: "fan",
+          defaultNote: "Transferred to commercial tumble dryer with fabric conditioner."
+        },
+        {
+          key: "READY_FOR_PICKUP",
+          title: "Folded, Packaged & Ready for Pickup",
+          icon: "check-circle",
+          defaultNote: "Folded neatly, inspected, packed in protective bags & marked ready."
+        },
+        {
+          key: "CLAIMED",
+          title: "Claim Stub Verified & Laundry Released",
+          icon: "package-check",
+          defaultNote: "Customer presented claim stub; laundry successfully released."
+        }
+      ];
+
+      const currentIdx = stageDefinitions.findIndex(s => s.key === currentStatus);
+      const effectiveIdx = currentIdx >= 0 ? currentIdx : 0;
+
+      let stepperHtml = "";
+      stageDefinitions.forEach((def, idx) => {
+        let stepClass = "pending";
+        if (idx < effectiveIdx) {
+          stepClass = "completed";
+        } else if (idx === effectiveIdx) {
+          stepClass = "current";
+        }
+
+        // Find matching entry from recorded history
+        const recorded = history.find(h => h.status === def.key);
+        let timeStr = "";
+        let actorStr = "";
+        let noteStr = def.defaultNote;
+
+        if (recorded) {
+          if (recorded.timestamp) {
+            const dt = new Date(recorded.timestamp);
+            if (!isNaN(dt.getTime())) {
+              timeStr = dt.toLocaleString('en-US', {
+                month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+              });
+            }
+          }
+          if (recorded.updatedBy) {
+            actorStr = recorded.updatedBy;
+          }
+          if (recorded.note) {
+            noteStr = recorded.note;
+          }
+        }
+
+        if (stepClass === "pending") {
+          timeStr = "Awaiting stage";
+          actorStr = "Pending";
+          noteStr = "This milestone will trigger when staff updates the order progress.";
+        }
+
+        stepperHtml += `
+          <div class="timeline-step ${stepClass}">
+            <div class="timeline-step-node">
+              <i data-lucide="${def.icon}"></i>
+            </div>
+            <div class="timeline-step-content">
+              <div class="timeline-step-header">
+                <span class="timeline-step-title">
+                  ${def.title}
+                  ${stepClass === 'current' ? '<span class="badge badge-active" style="font-size:0.68rem; padding:1px 6px;">CURRENT STAGE</span>' : ''}
+                  ${stepClass === 'completed' ? '<span class="badge badge-success" style="font-size:0.68rem; padding:1px 6px;">COMPLETED</span>' : ''}
+                </span>
+                <span class="timeline-step-time">
+                  <i data-lucide="clock"></i> ${timeStr}
+                </span>
+              </div>
+              <div class="timeline-step-note">${noteStr}</div>
+              <div class="timeline-step-meta">
+                <span class="timeline-step-actor"><i data-lucide="user-check"></i> Handled by: <b>${actorStr || 'System / Staff'}</b></span>
+                <span style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-muted);">${def.key}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      stepperContainer.innerHTML = stepperHtml;
+    }
+
+    // Status Override / Advance Control Panel
+    if (updaterContainer) {
+      const nextStages = {
+        RECEIVED: { next: "WASHING", label: "Start Washing 🧼" },
+        WASHING: { next: "DRYING", label: "Move to Dryer 🌀" },
+        DRYING: { next: "READY_FOR_PICKUP", label: "Mark Ready for Pickup ✅" },
+        READY_FOR_PICKUP: { next: "CLAIMED", label: "Customer Claim & Release 🧺" },
+        CLAIMED: null
+      };
+
+      const nextInfo = nextStages[currentStatus];
+
+      updaterContainer.innerHTML = `
+        <div class="timeline-updater-label">
+          <i data-lucide="sliders"></i>
+          <span>Update / Advance Tracker Status:</span>
+        </div>
+        <div class="timeline-updater-actions">
+          ${nextInfo ? `
+            <button type="button" class="btn btn-primary btn-sm" onclick="AdminPanel.updateStatusFromTimeline('${sale.id}', '${nextInfo.next}')">
+              <i data-lucide="arrow-right-circle"></i> ${nextInfo.label}
+            </button>
+          ` : `
+            <span class="badge badge-success" style="font-size:0.8rem; padding:4px 10px;"><i data-lucide="check-circle-2"></i> Laundry Fully Claimed</span>
+          `}
+          <select class="status-quick-select" onchange="AdminPanel.updateStatusFromTimeline('${sale.id}', this.value)" style="padding:6px 10px;">
+            <option value="RECEIVED" ${currentStatus === 'RECEIVED' ? 'selected' : ''}>Received 📥</option>
+            <option value="WASHING" ${currentStatus === 'WASHING' ? 'selected' : ''}>Washing 🧼</option>
+            <option value="DRYING" ${currentStatus === 'DRYING' ? 'selected' : ''}>Drying 🌀</option>
+            <option value="READY_FOR_PICKUP" ${currentStatus === 'READY_FOR_PICKUP' ? 'selected' : ''}>Ready for Pickup ✅</option>
+            <option value="CLAIMED" ${currentStatus === 'CLAIMED' ? 'selected' : ''}>Claimed 🧺</option>
+          </select>
+        </div>
+      `;
+    }
+
+    if (modal) {
+      modal.classList.add("active");
+      if (window.lucide) lucide.createIcons();
+    }
+  },
+
+  updateStatusFromTimeline(saleId, newStatus) {
+    this.updateLaundryOrderStatus(saleId, newStatus);
+    // Refresh modal timeline view immediately
+    this.openTrackerTimelineModal(saleId);
+  },
+
+  closeTrackerTimelineModal() {
+    const modal = document.getElementById("modal-tracker-timeline");
+    if (modal) modal.classList.remove("active");
+    this._activeTimelineSaleId = null;
+  },
+
+  printStubFromTimeline() {
+    if (this._activeTimelineSaleId) {
+      this.viewPastReceipt(this._activeTimelineSaleId);
+    }
+  },
+
+  exportTrackerHistoryCSV() {
+    const data = StorageManager.get();
+    let sales = data.sales || [];
+
+    // Filter by status
+    if (this.trackerHistoryFilterStatus === "ACTIVE") {
+      sales = sales.filter(s => (s.laundryStatus || "RECEIVED") !== "CLAIMED");
+    } else if (this.trackerHistoryFilterStatus !== "ALL") {
+      sales = sales.filter(s => (s.laundryStatus || "RECEIVED") === this.trackerHistoryFilterStatus);
+    }
+
+    // Filter by date
+    const period = document.getElementById("admin-th-period-filter")?.value || "all";
+    const dateFrom = document.getElementById("admin-th-date-from")?.value || "";
+    const dateTo = document.getElementById("admin-th-date-to")?.value || "";
+    sales = sales.filter(s => this.matchesDateFilter(s.createdAt, period, dateFrom, dateTo));
+
+    // Filter by search query
+    const query = (document.getElementById("admin-th-search")?.value || "").trim().toLowerCase();
+    if (query) {
+      sales = sales.filter(s => {
+        const name = (s.customerName || "").toLowerCase();
+        const phone = (s.customerPhone || "").toLowerCase();
+        const claim = (s.claimNumber || "").toLowerCase();
+        const txn = (s.transactionNumber || "").toLowerCase();
+        return name.includes(query) || phone.includes(query) || claim.includes(query) || txn.includes(query);
+      });
+    }
+
+    if (sales.length === 0) {
+      App.showToast("No tracker history records to export for this filter.", "warning");
+      return;
+    }
+
+    let csv = "Date Ordered,Claim Number,Transaction Number,Customer Name,Customer Phone,Current Status,Services & Items,Total Weight (kg),Promised Due Date,Date Claimed,Total Paid,Payment Method,Handled By\n";
+
+    sales.forEach(s => {
+      const itemsList = s.items.map(it => `${it.quantity}${it.unit || 'pc'} ${it.productName}`).join("; ");
+      const claimedDate = s.claimedAt || (s.laundryStatus === "CLAIMED" ? "Claimed" : "—");
+      csv += `"${s.createdAt}","${s.claimNumber || ''}","${s.transactionNumber}","${s.customerName || 'Walk-in'}","${s.customerPhone || ''}","${s.laundryStatus || 'RECEIVED'}","${itemsList}",${s.totalWeight || 0},"${s.dueDate || ''}","${claimedDate}",${s.total},"${s.paymentMethod || 'CASH'}","${s.cashierName || ''}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const downloadAnchor = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    downloadAnchor.setAttribute("href", url);
+    downloadAnchor.setAttribute("download", `laundry_tracker_history_${timestamp}.csv`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    App.showToast("Tracker history exported successfully!", "success");
   },
 
   /* =========================================================

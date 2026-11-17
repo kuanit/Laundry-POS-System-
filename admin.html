@@ -74,6 +74,11 @@
           <span>Laundry Tracker</span>
           <span class="sidebar-pill-badge badge-active-laundry" id="sidebar-active-laundry-count">0</span>
         </button>
+        <button class="nav-item" data-tab="tracker-history" onclick="AdminPanel.switchTab('tracker-history')">
+          <i data-lucide="history"></i>
+          <span>Tracker History</span>
+          <span class="sidebar-pill-badge" id="sidebar-tracker-history-count" style="display:none; background:rgba(59, 130, 246, 0.2); color:#60a5fa; border:1px solid rgba(59, 130, 246, 0.3);">0</span>
+        </button>
         <button class="nav-item" data-tab="products" onclick="AdminPanel.switchTab('products')">
           <i data-lucide="shirt"></i>
           <span>Services & Products</span>
@@ -334,6 +339,134 @@
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <!-- 2.5 TRACKER HISTORY TAB (TRACKING STATUS FOR EACH CUSTOMER) -->
+        <div id="tab-tracker-history" class="tab-pane">
+          <div class="section-toolbar">
+            <div class="toolbar-left" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+              <div class="search-box-wrapper mini">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="admin-th-search" placeholder="Search customer, phone, or Claim #..."
+                  oninput="AdminPanel.filterTrackerHistory()">
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-secondary active" id="btn-adm-th-all"
+                  onclick="AdminPanel.filterTrackerHistoryStatus('ALL')">All Orders</button>
+                <button class="btn btn-secondary" id="btn-adm-th-active"
+                  onclick="AdminPanel.filterTrackerHistoryStatus('ACTIVE')">In-Progress</button>
+                <button class="btn btn-secondary" id="btn-adm-th-ready"
+                  onclick="AdminPanel.filterTrackerHistoryStatus('READY_FOR_PICKUP')">Ready ✅</button>
+                <button class="btn btn-secondary" id="btn-adm-th-claimed"
+                  onclick="AdminPanel.filterTrackerHistoryStatus('CLAIMED')">Claimed 🧺</button>
+              </div>
+              <select id="admin-th-period-filter" class="form-select mini" onchange="AdminPanel.onTrackerHistoryPeriodChange()">
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="week">This Week (Sun - Sat)</option>
+                <option value="month">This Month</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
+              <div class="date-filter-group">
+                <span class="date-filter-label">From</span>
+                <input type="date" id="admin-th-date-from" class="date-filter-input" onchange="AdminPanel.onTrackerHistoryCustomDateChange()">
+                <span class="date-filter-label">To</span>
+                <input type="date" id="admin-th-date-to" class="date-filter-input" onchange="AdminPanel.onTrackerHistoryCustomDateChange()">
+                <button type="button" class="date-filter-clear-btn" onclick="AdminPanel.clearTrackerHistoryDateFilter()" title="Reset Date Filter">✕</button>
+              </div>
+            </div>
+            <div class="toolbar-right" style="display:flex; align-items:center; gap:8px;">
+              <div class="btn-group">
+                <button type="button" class="btn btn-secondary btn-sm active" id="btn-th-view-table" onclick="AdminPanel.switchTrackerHistoryView('table')" title="Chronological Orders Log">
+                  <i data-lucide="list"></i> Orders Log
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-th-view-customer" onclick="AdminPanel.switchTrackerHistoryView('customer')" title="Grouped by Customer">
+                  <i data-lucide="users"></i> By Customer
+                </button>
+              </div>
+              <button type="button" class="btn btn-secondary" onclick="AdminPanel.exportTrackerHistoryCSV()">
+                <i data-lucide="download"></i> Export History CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Key Metrics Grid for Customer Tracker History -->
+          <div class="metrics-grid mt-3">
+            <div class="metric-card card-revenue">
+              <div class="metric-icon-box">
+                <i data-lucide="history"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">TOTAL TRACKED LAUNDRY</span>
+                <h2 class="metric-value" id="th-kpi-total-orders">0</h2>
+                <span class="metric-subtext" id="th-kpi-total-customers">Across 0 unique customers</span>
+              </div>
+            </div>
+
+            <div class="metric-card card-orders">
+              <div class="metric-icon-box" style="background:rgba(59, 130, 246, 0.15); color:#3b82f6;">
+                <i data-lucide="sparkles"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">CURRENTLY IN-PROGRESS</span>
+                <h2 class="metric-value" id="th-kpi-active-orders">0</h2>
+                <span class="metric-subtext" id="th-kpi-active-subtext">0 washing, 0 drying</span>
+              </div>
+            </div>
+
+            <div class="metric-card card-alert" style="border-color:rgba(16, 185, 129, 0.4);">
+              <div class="metric-icon-box" style="background:var(--success-light); color:var(--success);">
+                <i data-lucide="check-circle-2"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">READY FOR PICKUP</span>
+                <h2 class="metric-value text-success" id="th-kpi-ready-orders">0</h2>
+                <span class="metric-subtext">Awaiting customer collection</span>
+              </div>
+            </div>
+
+            <div class="metric-card card-products">
+              <div class="metric-icon-box">
+                <i data-lucide="package-check"></i>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">CLAIMED & COMPLETED</span>
+                <h2 class="metric-value" id="th-kpi-claimed-orders">0</h2>
+                <span class="metric-subtext" id="th-kpi-completion-rate">0% completed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- View 1: Detailed Table View -->
+          <div id="tracker-history-table-view" class="panel-body card-container mt-3">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Claim #</th>
+                    <th>Customer Name & Contact</th>
+                    <th>Current Status</th>
+                    <th>Milestone Stepper Trail</th>
+                    <th>Services & Weight</th>
+                    <th>Date Received</th>
+                    <th>Promised Due</th>
+                    <th>Date Claimed</th>
+                    <th>Turnaround</th>
+                    <th class="text-right">Timeline & Stub</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-tracker-history-tbody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- View 2: Grouped by Customer View -->
+          <div id="tracker-history-customer-view" class="customer-history-grid mt-3" style="display:none;">
+            <!-- Populated dynamically with customer cards -->
           </div>
         </div>
 
@@ -1725,6 +1858,57 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="AdminPanel.closeBarcodeDetectorModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAUNDRY STATUS TRACKER TIMELINE MODAL -->
+  <div id="modal-tracker-timeline" class="modal-backdrop">
+    <div class="modal-dialog modal-timeline-dialog">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex; align-items:center; gap:10px;">
+          <div class="modal-icon-badge" style="background: rgba(2, 132, 199, 0.2); color: #38bdf8;">
+            <i data-lucide="history"></i>
+          </div>
+          <div>
+            <h3 style="margin:0;">Customer Laundry Tracker Trail</h3>
+            <p class="modal-subtitle" id="th-modal-subtitle">Milestone status history & stage progression</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="AdminPanel.closeTrackerTimelineModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Customer & Order Summary Header Card -->
+        <div class="timeline-order-summary" id="th-modal-order-summary">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Vertical Milestone Timeline -->
+        <div class="timeline-stepper-container mt-4">
+          <h4 class="timeline-section-title">
+            <i data-lucide="route"></i> Status Milestone History
+          </h4>
+          <div class="timeline-stepper" id="th-modal-stepper">
+            <!-- Populated dynamically with timeline nodes -->
+          </div>
+        </div>
+
+        <!-- Status Override / Advance Control Panel -->
+        <div class="timeline-status-updater mt-4" id="th-modal-status-updater">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-th-print-stub" onclick="AdminPanel.printStubFromTimeline()">
+          <i data-lucide="printer"></i> Print Claim Stub
+        </button>
+        <button type="button" class="btn btn-primary" onclick="AdminPanel.closeTrackerTimelineModal()">
+          Done
+        </button>
       </div>
     </div>
   </div>
