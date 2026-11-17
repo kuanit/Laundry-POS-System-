@@ -1913,6 +1913,44 @@
     </div>
   </div>
 
+  <!-- ORDER SERVICES & ITEMS BREAKDOWN MODAL -->
+  <div id="modal-order-services" class="modal-backdrop">
+    <div class="modal-dialog modal-md">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex; align-items:center; gap:10px;">
+          <div class="modal-icon-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--success);">
+            <i data-lucide="layers"></i>
+          </div>
+          <div>
+            <h3 style="margin:0;">Services & Items Breakdown</h3>
+            <p class="modal-subtitle" id="services-modal-subtitle">Claim Order Details</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="AdminPanel.closeOrderServicesModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" id="services-modal-body">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-services-timeline" onclick="AdminPanel.openTimelineFromServicesModal()">
+            <i data-lucide="route"></i> Status Timeline
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-services-stub" onclick="AdminPanel.printStubFromServicesModal()">
+            <i data-lucide="printer"></i> Claim Stub
+          </button>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="AdminPanel.closeOrderServicesModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 

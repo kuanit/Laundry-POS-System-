@@ -1033,9 +1033,16 @@ const AdminPanel = {
           <td>
             ${stepperHtml}
           </td>
-          <td class="text-sm">
-            ${itemsSummary}
-            <div style="margin-top:2px;">${weightDisplay} • <span class="text-success font-bold">₱${sale.total.toFixed(2)}</span></div>
+          <td>
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--success); line-height: 1.2;">
+              ₱${sale.total.toFixed(2)}
+            </div>
+            <div class="text-xs text-muted" style="margin-top: 2px;">
+              ${sale.totalWeight ? `<b>${sale.totalWeight} kg</b>` : 'Weight: —'}
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="AdminPanel.showOrderServicesModal('${sale.id}')" style="margin-top: 5px; padding: 2px 8px; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px;" title="View Services & Items Details">
+              <i data-lucide="layers" style="width: 12px; height: 12px;"></i> Details
+            </button>
           </td>
           <td>
             <span class="text-sm font-bold">${orderedDateStr}</span>
@@ -1142,8 +1149,11 @@ const AdminPanel = {
             <div class="customer-order-row-mid">
               ${stepperHtml}
             </div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
-              ${itemsText} • <b>₱${ord.total.toFixed(2)}</b>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; font-size:0.8rem;">
+              <span style="font-weight:800; color:var(--success);">₱${ord.total.toFixed(2)} ${ord.totalWeight ? `<small class="text-muted" style="font-weight:normal;">(${ord.totalWeight} kg)</small>` : ''}</span>
+              <button type="button" class="btn btn-secondary btn-sm" style="padding:1px 6px; font-size:0.7rem; display:inline-flex; align-items:center; gap:2px;" onclick="AdminPanel.showOrderServicesModal('${ord.id}')">
+                <i data-lucide="layers" style="width:10px;height:10px;"></i> Details
+              </button>
             </div>
             <div class="customer-order-row-bottom">
               <span style="font-size:0.72rem; color:var(--text-muted);"><i data-lucide="calendar" style="width:11px;height:11px;vertical-align:-1px;"></i> ${dateStr}</span>
@@ -1437,6 +1447,131 @@ const AdminPanel = {
   printStubFromTimeline() {
     if (this._activeTimelineSaleId) {
       this.viewPastReceipt(this._activeTimelineSaleId);
+    }
+  },
+
+  showOrderServicesModal(saleId) {
+    this._activeServicesSaleId = saleId;
+    const data = StorageManager.get();
+    const sale = (data.sales || []).find(s => s.id === saleId);
+    if (!sale) return;
+
+    const modal = document.getElementById("modal-order-services");
+    const body = document.getElementById("services-modal-body");
+    const subtitle = document.getElementById("services-modal-subtitle");
+
+    if (subtitle) {
+      subtitle.textContent = `Claim Stub #${sale.claimNumber || sale.transactionNumber}`;
+    }
+
+    if (body) {
+      const currentStatus = sale.laundryStatus || "RECEIVED";
+      const orderedDate = sale.createdAt ? new Date(sale.createdAt).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+      }) : "—";
+
+      let itemsRows = "";
+      if (Array.isArray(sale.items) && sale.items.length > 0) {
+        itemsRows = sale.items.map(it => `
+          <tr>
+            <td>
+              <b style="color:var(--text-primary);">${it.productName}</b>
+            </td>
+            <td class="text-right font-bold">${it.quantity} ${it.unit || 'pc'}</td>
+            <td class="text-right">₱${Number(it.unitPrice || 0).toFixed(2)}</td>
+            <td class="text-right font-bold text-success">₱${Number(it.subtotal || 0).toFixed(2)}</td>
+          </tr>
+        `).join("");
+      } else {
+        itemsRows = `<tr><td colspan="4" class="text-center text-muted" style="padding:1.5rem;">No item details recorded.</td></tr>`;
+      }
+
+      body.innerHTML = `
+        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+            <div>
+              <h4 style="margin:0; font-size:1rem; color:var(--text-primary); font-weight:700;">${sale.customerName || 'Walk-in Customer'}</h4>
+              <p style="margin:2px 0 0 0; font-size:0.78rem; color:var(--text-muted);"><i data-lucide="phone" style="width:11px;height:11px;vertical-align:-1px;"></i> ${sale.customerPhone || 'No contact number'}</p>
+            </div>
+            <div style="text-align:right;">
+              <span class="claim-tag-number">${sale.claimNumber || '#' + sale.transactionNumber}</span>
+              <div style="margin-top:3px;"><span class="badge ${currentStatus === 'CLAIMED' ? 'badge-success' : 'badge-active'}" style="font-size:0.72rem;">${currentStatus.replace(/_/g, ' ')}</span></div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-color); font-size:0.78rem;">
+            <div><span class="text-muted">Total Weight:</span> <b>${sale.totalWeight ? sale.totalWeight + ' kg' : '—'}</b></div>
+            <div style="text-align:right;"><span class="text-muted">Date Ordered:</span> <b>${orderedDate}</b></div>
+          </div>
+        </div>
+
+        <h5 style="margin:0 0 8px 0; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+          <i data-lucide="shirt" style="width:14px;height:14px;color:var(--primary);"></i> Breakdown of Services & Items
+        </h5>
+        <div class="table-responsive" style="border:1px solid var(--border-color); border-radius:var(--radius-md); max-height:240px; overflow-y:auto;">
+          <table class="data-table" style="margin:0;">
+            <thead>
+              <tr>
+                <th>Service / Supply Item</th>
+                <th class="text-right">Qty / Weight</th>
+                <th class="text-right">Rate</th>
+                <th class="text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRows}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; margin-top:12px; font-size:0.82rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span class="text-muted">Subtotal:</span>
+            <span>₱${Number(sale.subtotal || sale.total || 0).toFixed(2)}</span>
+          </div>
+          ${sale.discount > 0 ? `
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:var(--danger);">
+              <span>Discount (${sale.discountLabel || 'Applied'}):</span>
+              <span>-₱${Number(sale.discount).toFixed(2)}</span>
+            </div>
+          ` : ''}
+          <div style="display:flex; justify-content:space-between; padding-top:6px; border-top:1px solid var(--border-color); font-size:0.95rem; font-weight:800;">
+            <span>Total Paid (${sale.paymentMethod || 'CASH'}):</span>
+            <span class="text-success">₱${Number(sale.total || 0).toFixed(2)}</span>
+          </div>
+        </div>
+
+        ${sale.specialInstructions ? `
+          <div style="margin-top:10px; background:rgba(245, 158, 11, 0.1); border-left:3px solid var(--warning); padding:8px 12px; border-radius:4px; font-size:0.78rem;">
+            <b style="color:var(--warning);"><i data-lucide="info" style="width:12px;height:12px;vertical-align:-1px;"></i> Special Instructions:</b> ${sale.specialInstructions}
+          </div>
+        ` : ''}
+      `;
+    }
+
+    if (modal) {
+      modal.classList.add("active");
+      if (window.lucide) lucide.createIcons();
+    }
+  },
+
+  closeOrderServicesModal() {
+    const modal = document.getElementById("modal-order-services");
+    if (modal) modal.classList.remove("active");
+    this._activeServicesSaleId = null;
+  },
+
+  openTimelineFromServicesModal() {
+    const saleId = this._activeServicesSaleId;
+    this.closeOrderServicesModal();
+    if (saleId) {
+      this.openTrackerTimelineModal(saleId);
+    }
+  },
+
+  printStubFromServicesModal() {
+    const saleId = this._activeServicesSaleId;
+    if (saleId) {
+      this.viewPastReceipt(saleId);
     }
   },
 
