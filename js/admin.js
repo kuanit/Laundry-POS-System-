@@ -637,25 +637,26 @@ const AdminPanel = {
 
   getSaleStatusHistory(sale) {
     if (!sale) return [];
-    if (Array.isArray(sale.statusHistory) && sale.statusHistory.length > 0) {
-      return sale.statusHistory;
-    }
-    // Backward compatibility for existing records: synthesize progression
+    let history = Array.isArray(sale.statusHistory) && sale.statusHistory.length > 0
+      ? [...sale.statusHistory]
+      : [];
+
     const createdTime = new Date(sale.createdAt || Date.now()).getTime();
-    const history = [
-      {
+
+    if (history.length === 0) {
+      history.push({
         status: "RECEIVED",
         timestamp: sale.createdAt || new Date().toISOString(),
         updatedBy: sale.cashierName || "Cashier",
         note: "Order received & claim tag generated"
-      }
-    ];
+      });
+    }
 
     const currentStatus = sale.laundryStatus || "RECEIVED";
     const stages = ["WASHING", "DRYING", "READY_FOR_PICKUP", "CLAIMED"];
     const currentIdx = stages.indexOf(currentStatus);
 
-    if (currentIdx >= 0) {
+    if (currentIdx >= 0 && !history.some(h => h.status === "WASHING")) {
       history.push({
         status: "WASHING",
         timestamp: new Date(createdTime + 20 * 60000).toISOString(),
@@ -663,7 +664,7 @@ const AdminPanel = {
         note: "Sorted and placed in commercial washer"
       });
     }
-    if (currentIdx >= 1) {
+    if (currentIdx >= 1 && !history.some(h => h.status === "DRYING")) {
       history.push({
         status: "DRYING",
         timestamp: new Date(createdTime + 70 * 60000).toISOString(),
@@ -671,7 +672,7 @@ const AdminPanel = {
         note: "Wash completed; transferred to tumble dryer"
       });
     }
-    if (currentIdx >= 2) {
+    if (currentIdx >= 2 && !history.some(h => h.status === "READY_FOR_PICKUP")) {
       const readyTime = sale.readyAt ? new Date(sale.readyAt).toISOString() :
         (sale.dueDate ? new Date(new Date(sale.dueDate).getTime() - 2 * 3600000).toISOString() : new Date(createdTime + 150 * 60000).toISOString());
       history.push({
@@ -681,7 +682,7 @@ const AdminPanel = {
         note: "Drying finished, folded, bagged & tagged ready"
       });
     }
-    if (currentIdx >= 3) {
+    if (currentIdx >= 3 && !history.some(h => h.status === "CLAIMED")) {
       const claimedTime = sale.claimedAt ? new Date(sale.claimedAt).toISOString() :
         (sale.dueDate || new Date(createdTime + 24 * 3600000).toISOString());
       history.push({
@@ -693,6 +694,33 @@ const AdminPanel = {
     }
 
     return history;
+  },
+
+  getClaimedDateInfo(sale) {
+    if (!sale) return null;
+    if (sale.laundryStatus !== "CLAIMED") return null;
+
+    let isoDate = sale.claimedAt;
+    if (!isoDate) {
+      const history = this.getSaleStatusHistory(sale);
+      const claimedEntry = history.slice().reverse().find(h => h.status === "CLAIMED");
+      if (claimedEntry && claimedEntry.timestamp) {
+        isoDate = claimedEntry.timestamp;
+      }
+    }
+    if (!isoDate) {
+      isoDate = sale.dueDate || sale.createdAt || new Date().toISOString();
+    }
+
+    const dt = new Date(isoDate);
+    if (isNaN(dt.getTime())) return null;
+
+    return {
+      iso: dt.toISOString(),
+      dateStr: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      timeStr: dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      fullStr: dt.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+    };
   },
 
   renderMiniStepper(currentStatus) {
@@ -740,13 +768,9 @@ const AdminPanel = {
     let end = null;
     const isCompleted = sale.laundryStatus === "CLAIMED";
     if (isCompleted) {
-      if (sale.claimedAt) {
-        end = new Date(sale.claimedAt).getTime();
-      } else if (Array.isArray(sale.statusHistory)) {
-        const claimedEntry = sale.statusHistory.slice().reverse().find(h => h.status === "CLAIMED");
-        if (claimedEntry && claimedEntry.timestamp) {
-          end = new Date(claimedEntry.timestamp).getTime();
-        }
+      const claimedInfo = this.getClaimedDateInfo(sale);
+      if (claimedInfo) {
+        end = new Date(claimedInfo.iso).getTime();
       }
       if (!end || isNaN(end)) {
         end = sale.dueDate ? new Date(sale.dueDate).getTime() : (start + 24 * 3600000);
@@ -973,17 +997,15 @@ const AdminPanel = {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
       }) : "Standard (48h)";
 
-      let claimedDateStr = "—";
-      if (currentStatus === "CLAIMED") {
-        const cDate = sale.claimedAt || (sale.statusHistory && sale.statusHistory.slice().reverse().find(h => h.status === 'CLAIMED')?.timestamp);
-        if (cDate) {
-          const dt = new Date(cDate);
-          if (!isNaN(dt.getTime())) {
-            claimedDateStr = `${dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-          }
-        } else {
-          claimedDateStr = "Claimed";
-        }
+      const claimedInfo = this.getClaimedDateInfo(sale);
+      let claimedDateHtml = "";
+      if (claimedInfo) {
+        claimedDateHtml = `
+          <span class="text-sm font-bold text-success">${claimedInfo.dateStr}</span>
+          <br><small class="text-muted"><i data-lucide="clock" style="width:11px;height:11px;vertical-align:-1px;"></i> ${claimedInfo.timeStr}</small>
+        `;
+      } else {
+        claimedDateHtml = `<span class="text-muted text-sm">— <small>(Pending)</small></span>`;
       }
 
       const itemsSummary = sale.items.map(it => `${it.quantity}${it.unit || 'pc'} ${it.productName}`).join("<br>");
@@ -1020,7 +1042,7 @@ const AdminPanel = {
             ${orderedTimeStr ? `<br><small class="text-muted">${orderedTimeStr}</small>` : ''}
           </td>
           <td><span class="text-warning text-sm font-bold">${dueFormatted}</span></td>
-          <td><span class="text-sm font-bold ${currentStatus === 'CLAIMED' ? 'text-success' : 'text-muted'}">${claimedDateStr}</span></td>
+          <td>${claimedDateHtml}</td>
           <td>${turnaroundHtml}</td>
           <td class="text-right">
             <div style="display:flex; justify-content:flex-end; gap:6px;">
@@ -1456,8 +1478,9 @@ const AdminPanel = {
 
     sales.forEach(s => {
       const itemsList = s.items.map(it => `${it.quantity}${it.unit || 'pc'} ${it.productName}`).join("; ");
-      const claimedDate = s.claimedAt || (s.laundryStatus === "CLAIMED" ? "Claimed" : "—");
-      csv += `"${s.createdAt}","${s.claimNumber || ''}","${s.transactionNumber}","${s.customerName || 'Walk-in'}","${s.customerPhone || ''}","${s.laundryStatus || 'RECEIVED'}","${itemsList}",${s.totalWeight || 0},"${s.dueDate || ''}","${claimedDate}",${s.total},"${s.paymentMethod || 'CASH'}","${s.cashierName || ''}"\n`;
+      const claimedInfo = this.getClaimedDateInfo(s);
+      const claimedDateStr = claimedInfo ? claimedInfo.fullStr : "—";
+      csv += `"${s.createdAt}","${s.claimNumber || ''}","${s.transactionNumber}","${s.customerName || 'Walk-in'}","${s.customerPhone || ''}","${s.laundryStatus || 'RECEIVED'}","${itemsList}",${s.totalWeight || 0},"${s.dueDate || ''}","${claimedDateStr}",${s.total},"${s.paymentMethod || 'CASH'}","${s.cashierName || ''}"\n`;
     });
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
